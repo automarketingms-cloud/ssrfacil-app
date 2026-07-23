@@ -1,0 +1,93 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+
+from app.core.database import get_db
+from app.models.cliente import Cliente
+from app.schemas.cliente import ClienteCreate, ClienteUpdate, ClienteResponse
+
+router = APIRouter(prefix="/clientes", tags=["Clientes"])
+
+
+@router.post("/", response_model=ClienteResponse)
+def crear_cliente(cliente: ClienteCreate, db: Session = Depends(get_db)):
+    nuevo_cliente = Cliente(**cliente.model_dump())
+    db.add(nuevo_cliente)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="El RUT o numero de medidor ya esta registrado")
+    db.refresh(nuevo_cliente)
+    return nuevo_cliente
+
+
+@router.get("/", response_model=list[ClienteResponse])
+def listar_clientes(
+    activo: bool | None = None,
+    es_socio: bool | None = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Cliente)
+    if activo is not None:
+        query = query.filter(Cliente.activo == activo)
+    if es_socio is not None:
+        query = query.filter(Cliente.es_socio == es_socio)
+    return query.order_by(Cliente.nombre).all()
+
+
+@router.get("/buscar/{rut}", response_model=ClienteResponse)
+def buscar_por_rut(rut: str, db: Session = Depends(get_db)):
+    cliente = db.query(Cliente).filter(Cliente.rut == rut).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    return cliente
+
+
+@router.get("/{cliente_id}", response_model=ClienteResponse)
+def obtener_cliente(cliente_id: int, db: Session = Depends(get_db)):
+    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    return cliente
+
+
+@router.patch("/{cliente_id}", response_model=ClienteResponse)
+def actualizar_cliente(cliente_id: int, datos: ClienteUpdate, db: Session = Depends(get_db)):
+    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    datos_actualizados = datos.model_dump(exclude_unset=True)  # solo lo que vino en el body
+    for campo, valor in datos_actualizados.items():
+        setattr(cliente, campo, valor)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="El RUT o numero de medidor ya esta registrado")
+    db.refresh(cliente)
+    return cliente
+
+
+@router.patch("/{cliente_id}/desactivar", response_model=ClienteResponse)
+def desactivar_cliente(cliente_id: int, db: Session = Depends(get_db)):
+    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    cliente.activo = False
+    db.commit()
+    db.refresh(cliente)
+    return cliente
+
+
+@router.patch("/{cliente_id}/reactivar", response_model=ClienteResponse)
+def reactivar_cliente(cliente_id: int, db: Session = Depends(get_db)):
+    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    cliente.activo = True
+    db.commit()
+    db.refresh(cliente)
+    return cliente
