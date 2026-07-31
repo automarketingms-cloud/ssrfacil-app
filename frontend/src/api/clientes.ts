@@ -43,6 +43,15 @@ export async function buscarClientePorRut(rut: string): Promise<Cliente> {
   return res.json();
 }
 
+export async function obtenerCliente(id: number): Promise<Cliente> {
+  const res = await fetch(`${API_URL}/clientes/${id}`);
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw new Error(error?.detail || "Cliente no encontrado");
+  }
+  return res.json();
+}
+
 export async function actualizarCliente(
   id: number,
   data: Partial<Omit<Cliente, "id">>,

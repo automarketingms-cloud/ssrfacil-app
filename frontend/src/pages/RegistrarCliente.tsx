@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Input from "../components/Input";
 import { crearCliente } from "../api/clientes";
+import { formatearRut, validarRut } from "../utils/rut";
 
 const initialForm = {
   nombre: "",
@@ -17,14 +18,34 @@ export default function RegistrarCliente() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [rutError, setRutError] = useState<string | null>(null);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
+  function handleRutChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const formateado = formatearRut(e.target.value);
+    setForm((prev) => ({ ...prev, rut: formateado }));
+
+    if (formateado.length === 0) {
+      setRutError(null);
+    } else if (!validarRut(formateado)) {
+      setRutError("RUT inválido");
+    } else {
+      setRutError(null);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!validarRut(form.rut)) {
+      setRutError("RUT inválido");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(false);
@@ -72,14 +93,18 @@ export default function RegistrarCliente() {
           required
           placeholder="Juan Pérez"
         />
-        <Input
-          label="RUT"
-          name="rut"
-          value={form.rut}
-          onChange={handleChange}
-          required
-          placeholder="12.345.678-9"
-        />
+        <div>
+          <Input
+            label="RUT"
+            name="rut"
+            value={form.rut}
+            onChange={handleRutChange}
+            required
+            placeholder="12.345.678-9"
+            maxLength={12}
+          />
+          {rutError && <p className="text-xs text-red-600 mt-1">{rutError}</p>}
+        </div>
         <Input
           label="Dirección"
           name="direccion"

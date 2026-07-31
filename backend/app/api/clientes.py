@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from datetime import date
 
 from app.core.database import get_db
 from app.models.cliente import Cliente
@@ -11,7 +12,10 @@ router = APIRouter(prefix="/clientes", tags=["Clientes"])
 
 @router.post("/", response_model=ClienteResponse)
 def crear_cliente(cliente: ClienteCreate, db: Session = Depends(get_db)):
-    nuevo_cliente = Cliente(**cliente.model_dump())
+    datos = cliente.model_dump()
+    datos["fecha_ingreso"] = date.today()
+
+    nuevo_cliente = Cliente(**datos)
     db.add(nuevo_cliente)
     try:
         db.commit()
@@ -20,7 +24,6 @@ def crear_cliente(cliente: ClienteCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="El RUT o numero de medidor ya esta registrado")
     db.refresh(nuevo_cliente)
     return nuevo_cliente
-
 
 @router.get("/", response_model=list[ClienteResponse])
 def listar_clientes(

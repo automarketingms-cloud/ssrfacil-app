@@ -125,3 +125,54 @@ def calcular_total_a_pagar(consumo_m3: float, tarifa: Tarifa, cliente: Cliente) 
         "iva_aplicado": iva_monto,
         "total_a_pagar": round(total, 2),
     }
+
+def construir_reporte_facturacion(periodo: str, db: Session) -> dict:
+    """
+    Arma el reporte de facturación con respaldo para un periodo dado.
+    Usado por el endpoint JSON y los exports (Excel/PDF).
+    Lanza ValueError si no hay lecturas o no hay tarifa vigente.
+    """
+    lecturas = db.query(Lectura).filter(Lectura.periodo == periodo).all()
+    if not lecturas:
+        raise ValueError("No hay lecturas registradas para este periodo")
+
+    tarifa = obtener_tarifa_vigente(db, periodo)
+
+    detalle = []
+    total_recaudado = 0.0
+
+    for lectura in lecturas:
+        cliente = db.query(Cliente).filter(Cliente.id == lectura.cliente_id).first()
+        if not cliente:
+            continue  # cliente_id huerfano o eliminado, se omite del reporte
+
+        lectura_anterior = obtener_lectura_anterior(db, lectura.cliente_id, periodo)
+        consumo = calcular_consumo(lectura.lectura_actual, lectura_anterior)
+        desglose = calcular_total_a_pagar(consumo, tarifa, cliente)
+
+        registro = {
+            "cliente_id": cliente.id,
+            "nombre_cliente": cliente.nombre,
+            "rut": cliente.rut,
+            "direccion": cliente.direccion,
+            "numero_medidor": cliente.numero_medidor,
+            "es_socio": cliente.es_socio,
+            "tiene_subsidio": cliente.tiene_subsidio,
+            "periodo": periodo,
+            "fecha_lectura": lectura.fecha_lectura,
+            "lectura_anterior": lectura_anterior,
+            "lectura_actual": lectura.lectura_actual,
+            "consumo_m3": consumo,
+            "tarifa_aplicada": tarifa.nombre,
+            **desglose,
+        }
+        detalle.append(registro)
+        total_recaudado += registro["total_a_pagar"]
+
+    return {
+        "periodo": periodo,
+        "tarifa_vigente": tarifa.nombre,
+        "cantidad_clientes_facturados": len(detalle),
+        "total_recaudado": round(total_recaudado, 2),
+        "detalle": detalle,
+    }

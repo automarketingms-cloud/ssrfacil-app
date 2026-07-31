@@ -77,7 +77,11 @@ def resumen_mensual(periodo: str, db: Session = Depends(get_db)):
             "cliente_id": cliente.id,
             "nombre_cliente": cliente.nombre,
             "es_socio": cliente.es_socio,
+            "periodo": periodo,
+            "lectura_anterior": lectura_anterior,
+            "lectura_actual": lectura.lectura_actual,
             "consumo_m3": consumo,
+            "tarifa_aplicada": tarifa.nombre,
             **desglose,
         })
 

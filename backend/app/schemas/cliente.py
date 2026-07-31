@@ -6,7 +6,7 @@ from typing import Optional
 class ClienteBase(BaseModel):
     nombre: str
     rut: str
-    direccion: str = None
+    direccion: str 
     numero_medidor: str
     fecha_ingreso: Optional[date] = None
     activo: bool = True

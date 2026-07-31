@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Input from "../components/input";
-import Select from "../components/Select";
+import ClienteCombobox from "../components/ClienteCombobox";
 import { listarClientes } from "../api/clientes";
 import { crearLectura } from "../api/lecturas";
 import type { Cliente } from "../types";
@@ -24,7 +24,7 @@ export default function IngresarLectura() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    listarClientes()
+    listarClientes({ activo: true })
       .then(setClientes)
       .catch(() => setError("No se pudo cargar la lista de clientes"))
       .finally(() => setLoadingClientes(false));
@@ -70,19 +70,13 @@ export default function IngresarLectura() {
         onSubmit={handleSubmit}
         className="bg-surface border border-border rounded-xl p-6 flex flex-col gap-4"
       >
-        <Select
-          label="Cliente"
-          name="cliente_id"
+        <ClienteCombobox
+          clientes={clientes}
           value={form.cliente_id}
-          onChange={handleChange}
-          required
-          placeholder={
-            loadingClientes ? "Cargando clientes..." : "Selecciona un cliente"
+          onChange={(clienteId) =>
+            setForm((prev) => ({ ...prev, cliente_id: clienteId }))
           }
-          options={clientes.map((c) => ({
-            value: c.id,
-            label: `${c.nombre} — Medidor ${c.numero_medidor}`,
-          }))}
+          loading={loadingClientes}
         />
 
         <Input

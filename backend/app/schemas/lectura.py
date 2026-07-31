@@ -13,3 +13,8 @@ class LecturaResponse(LecturaCreate):
 
     class Config:
         from_attributes = True
+
+class LecturaUpdate(BaseModel):
+    fecha_lectura: date | None = None
+    periodo: str | None = None
+    lectura_actual: float | None = None

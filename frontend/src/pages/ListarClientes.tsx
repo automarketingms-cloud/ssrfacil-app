@@ -17,6 +17,7 @@ export default function ListarClientes() {
   const [error, setError] = useState<string | null>(null);
   const [filtroActivo, setFiltroActivo] = useState<FiltroActivo>("activos");
   const [filtroSocio, setFiltroSocio] = useState<FiltroSocio>("todos");
+  const [busqueda, setBusqueda] = useState("");
 
   async function cargarClientes() {
     setLoading(true);
@@ -55,6 +56,15 @@ export default function ListarClientes() {
     }
   }
 
+  const clientesFiltrados = clientes.filter((c) => {
+    const termino = busqueda.trim().toLowerCase();
+    if (!termino) return true;
+    return (
+      c.rut.toLowerCase().includes(termino) ||
+      c.nombre.toLowerCase().includes(termino)
+    );
+  });
+
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
@@ -71,6 +81,14 @@ export default function ListarClientes() {
       </p>
 
       <div className="flex gap-3 mb-4">
+        <input
+          type="text"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por nombre o RUT..."
+          className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+        />
+
         <select
           value={filtroActivo}
           onChange={(e) => setFiltroActivo(e.target.value as FiltroActivo)}
@@ -101,7 +119,7 @@ export default function ListarClientes() {
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         {loading ? (
           <p className="text-sm text-muted p-6">Cargando clientes...</p>
-        ) : clientes.length === 0 ? (
+        ) : clientesFiltrados.length === 0 ? (
           <p className="text-sm text-muted p-6">
             No hay clientes que coincidan con el filtro.
           </p>
@@ -114,11 +132,11 @@ export default function ListarClientes() {
                 <th className="text-left px-4 py-2 font-medium">Medidor</th>
                 <th className="text-left px-4 py-2 font-medium">Socio</th>
                 <th className="text-left px-4 py-2 font-medium">Estado</th>
-                <th className="text-right px-4 py-2 font-medium">Acción</th>
+                <th className="text-center px-4 py-2 font-medium">Acción</th>
               </tr>
             </thead>
             <tbody>
-              {clientes.map((c) => (
+              {clientesFiltrados.map((c) => (
                 <tr key={c.id} className="border-t border-border">
                   <td className="px-4 py-2 text-text">{c.nombre}</td>
                   <td className="px-4 py-2 text-muted">{c.rut}</td>
@@ -139,13 +157,27 @@ export default function ListarClientes() {
                       <span className="text-xs text-red-600">Inactivo</span>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-right">
-                    <button
-                      onClick={() => handleToggleActivo(c)}
-                      className="text-xs font-medium text-primary-dark hover:underline"
-                    >
-                      {c.activo ? "Desactivar" : "Reactivar"}
-                    </button>
+                  <td className="px-4 py-2">
+                    <div className="flex items-center justify-center gap-4">
+                      <button
+                        onClick={() => navigate(`/clientes/${c.id}`)}
+                        className="text-xs font-medium text-primary-dark hover:underline"
+                      >
+                        Ver
+                      </button>
+                      <button
+                        onClick={() => navigate(`/clientes/${c.id}/editar`)}
+                        className="text-xs font-medium text-primary-dark hover:underline"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleToggleActivo(c)}
+                        className="text-xs font-medium text-primary-dark hover:underline"
+                      >
+                        {c.activo ? "Desactivar" : "Reactivar"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

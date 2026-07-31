@@ -2,8 +2,15 @@ import { NavLink, Outlet } from "react-router-dom";
 
 const navItems = [
   { to: "/clientes", label: "Clientes" },
+  { to: "/tarifas", label: "Tarifas" },
   { to: "/lecturas", label: "Ingresar Lectura" },
+  { to: "/lecturas/historial", label: "Historial de Lecturas" },
+  { to: "/presion", label: "Registrar Presión" },
+  { to: "/continuidad", label: "Registrar Corte y/o reposicion" },
   { to: "/consumo", label: "Ver Consumo" },
+  { to: "/resumen", label: "Resumen mensual" },
+  { to: "/reclamos", label: "Reclamos" },
+  { to: "/reportes", label: "Reportes SISS" },
 ];
 
 export default function Layout() {
