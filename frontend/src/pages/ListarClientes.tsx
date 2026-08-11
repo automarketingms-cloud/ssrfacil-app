@@ -68,7 +68,7 @@ export default function ListarClientes() {
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-xl font-semibold text-text">Clientes</h2>
+        <h1 className="text-xl font-semibold text-text">Clientes</h1>
         <button
           onClick={() => navigate("/clientes/nuevo")}
           className="bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
@@ -152,9 +152,13 @@ export default function ListarClientes() {
                   </td>
                   <td className="px-4 py-2">
                     {c.activo ? (
-                      <span className="text-xs text-green-700">Activo</span>
+                      <span className="text-xs font-medium bg-success-soft text-success px-2 py-1 rounded-full">
+                        Activo
+                      </span>
                     ) : (
-                      <span className="text-xs text-red-600">Inactivo</span>
+                      <span className="text-xs font-medium bg-danger-soft text-danger px-2 py-1 rounded-full">
+                        Inactivo
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-2">

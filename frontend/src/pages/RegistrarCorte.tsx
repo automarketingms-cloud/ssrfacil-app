@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import { abrirCorte, cerrarCorte, listarCortes } from "../api/continuidad";
 import type { CorteResponse } from "../api/continuidad";
 import Input from "../components/Input";
-
+import Textarea from "../components/Textarea";
+import Select from "../components/Select";
 export default function RegistrarCorte() {
   const [cortesAbiertos, setCortesAbiertos] = useState<CorteResponse[]>([]);
   const [cargando, setCargando] = useState(false);
@@ -97,7 +98,7 @@ export default function RegistrarCorte() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-8">
+    <div className="max-w-2xl space-y-8">
       <div>
         <h1 className="text-xl font-semibold text-text mb-1">
           Registrar corte de continuidad
@@ -120,18 +121,16 @@ export default function RegistrarCorte() {
             required
           />
 
-          <div>
-            <label className="block text-sm text-muted mb-1">Tipo</label>
-            <select
-              name="tipo"
-              value={form.tipo}
-              onChange={handleChange}
-              className="w-full border border-border rounded-lg px-3 py-2 bg-white text-text focus:outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="no_programado">No programado</option>
-              <option value="programado">Programado</option>
-            </select>
-          </div>
+          <Select
+            label="Tipo"
+            name="tipo"
+            value={form.tipo}
+            onChange={handleChange}
+            options={[
+              { value: "no_programado", label: "No programado" },
+              { value: "programado", label: "Programado" },
+            ]}
+          />
 
           <Input
             label="Causa"
@@ -160,19 +159,14 @@ export default function RegistrarCorte() {
             placeholder="Opcional"
           />
 
-          <div>
-            <label className="block text-sm text-muted mb-1">
-              Observaciones
-            </label>
-            <textarea
-              name="observaciones"
-              value={form.observaciones}
-              onChange={handleChange}
-              rows={3}
-              placeholder="Opcional"
-              className="w-full border border-border rounded-lg px-3 py-2 bg-white text-text focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
+          <Textarea
+            label="Observaciones"
+            name="observaciones"
+            value={form.observaciones}
+            onChange={handleChange}
+            rows={3}
+            placeholder="Opcional"
+          />
 
           {error && (
             <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">

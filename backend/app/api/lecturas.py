@@ -5,8 +5,9 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.lectura import Lectura
 from app.models.cliente import Cliente
-from app.schemas.lectura import LecturaCreate, LecturaUpdate, LecturaResponse
-from app.services.facturacion import obtener_lectura_anterior, calcular_consumo
+from app.schemas.lectura import LecturaCreate, LecturaUpdate, LecturaResponse, LecturaTerminoMedioCreate
+from app.services.facturacion import obtener_lectura_anterior, calcular_consumo,calcular_consumo_promedio
+
 
 router = APIRouter(prefix="/lecturas", tags=["Lecturas"])
 
@@ -34,10 +35,19 @@ def crear_lectura(lectura: LecturaCreate, db: Session = Depends(get_db)):
             detail="Ya existe una lectura para este cliente en este periodo",
         )
 
-    lectura_anterior = obtener_lectura_anterior(db, lectura.cliente_id, lectura.periodo)
+    lectura_anterior_obj = (
+        db.query(Lectura)
+        .filter(Lectura.cliente_id == lectura.cliente_id, Lectura.periodo < lectura.periodo)
+        .order_by(Lectura.periodo.desc())
+        .first()
+    )
+    lectura_anterior = lectura_anterior_obj.lectura_actual if lectura_anterior_obj else 0.0
+    viene_de_termino_medio = bool(lectura_anterior_obj and lectura_anterior_obj.es_promedio)
 
     try:
-        consumo = calcular_consumo(lectura.lectura_actual, lectura_anterior)
+        consumo = calcular_consumo(
+            lectura.lectura_actual, lectura_anterior, permitir_negativo=viene_de_termino_medio
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -59,12 +69,21 @@ def listar_lecturas(cliente_id: int = None, db: Session = Depends(get_db)):
 
     resultado = []
     for l in lecturas:
-        lectura_anterior = obtener_lectura_anterior(db, l.cliente_id, l.periodo)
+        lectura_anterior_obj = (
+            db.query(Lectura)
+            .filter(Lectura.cliente_id == l.cliente_id, Lectura.periodo < l.periodo)
+            .order_by(Lectura.periodo.desc())
+            .first()
+        )
+        lectura_anterior = lectura_anterior_obj.lectura_actual if lectura_anterior_obj else 0.0
+        viene_de_termino_medio = bool(lectura_anterior_obj and lectura_anterior_obj.es_promedio)
         try:
-            consumo = calcular_consumo(l.lectura_actual, lectura_anterior)
+            consumo = calcular_consumo(
+                l.lectura_actual, lectura_anterior, permitir_negativo=viene_de_termino_medio
+            )
         except ValueError:
-            # lectura con inconsistencia (ej. anterior > actual) - la mostramos
-            # igual en el historial, pero sin consumo calculado
+            # lectura con inconsistencia real (ej. anterior > actual, sin venir de
+            # término medio) - la mostramos igual en el historial, sin consumo calculado
             consumo = None
         resultado.append({**l.__dict__, "consumo_m3": consumo})
     return resultado
@@ -77,9 +96,18 @@ def obtener_lectura(lectura_id: int, db: Session = Depends(get_db)):
     if not lectura:
         raise HTTPException(status_code=404, detail="Lectura no encontrada")
 
-    lectura_anterior = obtener_lectura_anterior(db, lectura.cliente_id, lectura.periodo)
+    lectura_anterior_obj = (
+        db.query(Lectura)
+        .filter(Lectura.cliente_id == lectura.cliente_id, Lectura.periodo < lectura.periodo)
+        .order_by(Lectura.periodo.desc())
+        .first()
+    )
+    lectura_anterior = lectura_anterior_obj.lectura_actual if lectura_anterior_obj else 0.0
+    viene_de_termino_medio = bool(lectura_anterior_obj and lectura_anterior_obj.es_promedio)
     try:
-        consumo = calcular_consumo(lectura.lectura_actual, lectura_anterior)
+        consumo = calcular_consumo(
+            lectura.lectura_actual, lectura_anterior, permitir_negativo=viene_de_termino_medio
+        )
     except ValueError:
         consumo = None
 
@@ -128,3 +156,52 @@ def editar_lectura(lectura_id: int, datos: LecturaUpdate, db: Session = Depends(
     db.refresh(lectura)
 
     return {**lectura.__dict__, "consumo_m3": consumo}
+
+@router.post("/termino-medio", response_model=LecturaResponse)
+def crear_lectura_termino_medio(datos: LecturaTerminoMedioCreate, db: Session = Depends(get_db)):
+    """
+    Registra una lectura estimada por término medio (Cap. 4 manual SISS),
+    para cuando no se pudo leer el medidor de un cliente en el período.
+    """
+    cliente = db.query(Cliente).filter(Cliente.id == datos.cliente_id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    if not cliente.activo:
+        raise HTTPException(
+            status_code=400,
+            detail="No se pueden ingresar lecturas para un cliente inactivo",
+        )
+
+    ya_existe = (
+        db.query(Lectura)
+        .filter(Lectura.cliente_id == datos.cliente_id, Lectura.periodo == datos.periodo)
+        .first()
+    )
+    if ya_existe:
+        raise HTTPException(
+            status_code=400,
+            detail="Ya existe una lectura para este cliente en este periodo",
+        )
+
+    lectura_anterior = obtener_lectura_anterior(db, datos.cliente_id, datos.periodo)
+
+    try:
+        consumo_promedio, meses_considerados = calcular_consumo_promedio(
+            db, datos.cliente_id, datos.periodo
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    nueva_lectura = Lectura(
+        cliente_id=datos.cliente_id,
+        fecha_lectura=datos.fecha_lectura,
+        periodo=datos.periodo,
+        lectura_actual=lectura_anterior + consumo_promedio,
+        es_promedio=True,
+    )
+    db.add(nueva_lectura)
+    db.commit()
+    db.refresh(nueva_lectura)
+
+    return {**nueva_lectura.__dict__, "consumo_m3": consumo_promedio}

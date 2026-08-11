@@ -31,7 +31,7 @@ export default function ReporteContinuidad() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
+    <div className="max-w-5xl space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-text mb-1">
           Reporte de Continuidad de Servicio
@@ -157,7 +157,7 @@ export default function ReporteContinuidad() {
 
 function Metrica({ label, valor }: { label: string; valor: number }) {
   return (
-    <div className="bg-white border border-border rounded-lg p-3">
+    <div className="bg-surface border border-border rounded-lg p-3">
       <p className="text-xs text-muted">{label}</p>
       <p className="text-lg font-semibold text-text">{valor}</p>
     </div>
@@ -175,14 +175,16 @@ function TablaCortes({
     <div className="overflow-x-auto bg-surface border border-border rounded-xl">
       <table className="min-w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 text-left text-muted">
-            <th className="px-4 py-2">Inicio</th>
-            {!activo && <th className="px-4 py-2">Término</th>}
-            {!activo && <th className="px-4 py-2">Duración (hrs)</th>}
-            <th className="px-4 py-2">Tipo</th>
-            <th className="px-4 py-2">Causa</th>
-            <th className="px-4 py-2">Sector</th>
-            <th className="px-4 py-2">Clientes afectados</th>
+          <tr className="bg-primary-light/40 text-text text-left">
+            <th className="px-4 py-2 font-medium">Inicio</th>
+            {!activo && <th className="px-4 py-2 font-medium">Término</th>}
+            {!activo && (
+              <th className="px-4 py-2 font-medium">Duración (hrs)</th>
+            )}
+            <th className="px-4 py-2 font-medium">Tipo</th>
+            <th className="px-4 py-2 font-medium">Causa</th>
+            <th className="px-4 py-2 font-medium">Sector</th>
+            <th className="px-4 py-2 font-medium">Clientes afectados</th>
           </tr>
         </thead>
         <tbody>

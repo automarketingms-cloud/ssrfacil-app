@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import Input from "../components/input";
+import Input from "../components/Input";
 import ClienteCombobox from "../components/ClienteCombobox";
 import { listarClientes } from "../api/clientes";
-import { crearLectura } from "../api/lecturas";
+import { crearLectura, crearLecturaTerminoMedio } from "../api/lecturas";
 import type { Cliente } from "../types";
 
 const today = new Date().toISOString().split("T")[0];
@@ -22,6 +22,7 @@ export default function IngresarLectura() {
   const [loadingClientes, setLoadingClientes] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [loadingTerminoMedio, setLoadingTerminoMedio] = useState(false);
 
   useEffect(() => {
     listarClientes({ activo: true })
@@ -59,9 +60,36 @@ export default function IngresarLectura() {
     }
   }
 
+  async function handleTerminoMedio() {
+    if (!form.cliente_id || !form.periodo || !form.fecha_lectura) {
+      setError(
+        "Selecciona cliente, período y fecha antes de usar término medio",
+      );
+      return;
+    }
+
+    setLoadingTerminoMedio(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      await crearLecturaTerminoMedio({
+        cliente_id: Number(form.cliente_id),
+        periodo: form.periodo,
+        fecha_lectura: form.fecha_lectura,
+      });
+      setSuccess(true);
+      setForm({ ...initialForm, cliente_id: "" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error inesperado");
+    } finally {
+      setLoadingTerminoMedio(false);
+    }
+  }
+
   return (
     <div className="max-w-lg">
-      <h2 className="text-xl font-semibold text-text mb-1">Ingresar Lectura</h2>
+      <h1 className="text-xl font-semibold text-text mb-1">Ingresar Lectura</h1>
       <p className="text-sm text-muted mb-6">
         Registra la lectura del medidor para el período correspondiente.
       </p>
@@ -118,13 +146,27 @@ export default function IngresarLectura() {
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={loading || loadingClientes}
-          className="mt-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-        >
-          {loading ? "Guardando..." : "Registrar lectura"}
-        </button>
+        <div className="flex gap-3 mt-2">
+          <button
+            type="submit"
+            disabled={loading || loadingClientes || loadingTerminoMedio}
+            className="flex-1 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white font-medium rounded-lg px-4 py-2 transition-colors"
+          >
+            {loading ? "Guardando..." : "Registrar lectura"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleTerminoMedio}
+            disabled={loading || loadingClientes || loadingTerminoMedio}
+            className="flex-1 border border-amber-300 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 text-amber-700 font-medium rounded-lg px-4 py-2 transition-colors"
+            title="Usar cuando no se pudo leer el medidor: factura con el consumo promedio de los últimos 3 meses"
+          >
+            {loadingTerminoMedio
+              ? "Calculando..."
+              : "No se pudo leer / Término medio"}
+          </button>
+        </div>
       </form>
     </div>
   );

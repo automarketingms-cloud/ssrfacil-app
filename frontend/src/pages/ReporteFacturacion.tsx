@@ -5,6 +5,7 @@ import {
   urlDescargaPdf,
 } from "../api/reportes";
 import type { ReporteFacturacionResponse } from "../types";
+import { formatoCLP } from "../utils/formato";
 
 export default function ReporteFacturacion() {
   const [periodo, setPeriodo] = useState("");
@@ -33,9 +34,9 @@ export default function ReporteFacturacion() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-text mb-1">
+      <h1 className="text-xl font-semibold text-text mb-1">
         Reporte de facturación con respaldo
-      </h2>
+      </h1>
       <p className="text-sm text-muted mb-6">
         Detalle de cobros por período, para presentar en caso de fiscalización.
       </p>
@@ -106,7 +107,19 @@ export default function ReporteFacturacion() {
                       Consumo (m³)
                     </th>
                     <th className="text-right px-4 py-2 font-medium">
+                      Subtotal
+                    </th>
+                    <th className="text-right px-4 py-2 font-medium">
+                      Subsidio
+                    </th>
+                    <th className="text-right px-4 py-2 font-medium">
+                      Saldo anterior
+                    </th>
+                    <th className="text-right px-4 py-2 font-medium">
                       Total a pagar
+                    </th>
+                    <th className="text-left px-4 py-2 font-medium">
+                      Vencimiento
                     </th>
                   </tr>
                 </thead>
@@ -123,8 +136,26 @@ export default function ReporteFacturacion() {
                       <td className="px-4 py-2 text-right text-muted">
                         {r.consumo_m3}
                       </td>
+                      <td className="px-4 py-2 text-right text-muted">
+                        {formatoCLP(r.subtotal)}
+                      </td>
+                      <td className="px-4 py-2 text-right text-muted">
+                        {r.subsidio_aplicado > 0
+                          ? `-${formatoCLP(r.subsidio_aplicado)}`
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-2 text-right text-muted">
+                        {r.saldo_anterior > 0
+                          ? formatoCLP(r.saldo_anterior)
+                          : "—"}
+                      </td>
                       <td className="px-4 py-2 text-right font-medium text-text">
-                        ${r.total_a_pagar.toLocaleString("es-CL")}
+                        {formatoCLP(r.total_a_pagar)}
+                      </td>
+                      <td className="px-4 py-2 text-text">
+                        {r.corte_en_tramite
+                          ? "Corte en Trámite"
+                          : (r.fecha_vencimiento ?? "—")}
                       </td>
                     </tr>
                   ))}
@@ -137,7 +168,7 @@ export default function ReporteFacturacion() {
                   clientes)
                 </span>
                 <span className="text-base font-semibold text-primary-dark">
-                  ${reporte.total_recaudado.toLocaleString("es-CL")}
+                  {formatoCLP(reporte.total_recaudado)}
                 </span>
               </div>
             </>

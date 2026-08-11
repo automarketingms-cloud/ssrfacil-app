@@ -21,6 +21,12 @@ export default function ClienteCombobox({
 
   const clienteSeleccionado = clientes.find((c) => String(c.id) === value);
 
+  useEffect(() => {
+    if (!value) {
+      setTexto("");
+    }
+  }, [value]);
+
   const filtrados = clientes.filter((c) => {
     const termino = texto.trim().toLowerCase();
     if (!termino) return true;
@@ -89,11 +95,11 @@ export default function ClienteCombobox({
           loading ? "Cargando clientes..." : "Escribe nombre o RUT..."
         }
         disabled={loading}
-        className="w-full px-3 py-2 rounded-lg border border-border bg-white text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+        className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
       />
 
       {abierto && !loading && (
-        <div className="absolute top-full mt-1 w-full bg-white border border-border rounded-lg shadow-md max-h-56 overflow-y-auto z-10">
+        <div className="absolute top-full mt-1 w-full bg-surface border border-border rounded-lg shadow-md max-h-56 overflow-y-auto z-10">
           {filtrados.length === 0 ? (
             <p className="text-sm text-muted px-3 py-2">Sin resultados</p>
           ) : (

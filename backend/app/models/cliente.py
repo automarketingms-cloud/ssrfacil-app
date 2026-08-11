@@ -15,3 +15,4 @@ class Cliente(Base):
 
     tiene_subsidio = Column(Boolean, default=False, nullable=False)
     porcentaje_subsidio = Column(Float, default=0.0, nullable=False)  # ej: 0.5 = 50%
+    credito_m3 = Column(Float, default=0.0, nullable=False)

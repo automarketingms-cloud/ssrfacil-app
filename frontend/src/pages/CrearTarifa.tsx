@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { crearTarifa } from "../api/tarifas";
 import type { TarifaTramo } from "../types";
+import { formatoCLP } from "../utils/formato";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 const tramoVacio = (numero: number, desde: number): TarifaTramo => ({
   numero_tramo: numero,
@@ -15,6 +17,7 @@ export default function CrearTarifa() {
 
   const [nombre, setNombre] = useState("");
   const [cargoFijo, setCargoFijo] = useState(0);
+  const [valorFondoReposicion, setValorFondoReposicion] = useState(0);
   const [vigenteDesde, setVigenteDesde] = useState("");
   const [tramos, setTramos] = useState<TarifaTramo[]>([tramoVacio(1, 1)]);
 
@@ -90,6 +93,7 @@ export default function CrearTarifa() {
       await crearTarifa({
         nombre,
         cargo_fijo: cargoFijo,
+        valor_fondo_reposicion: valorFondoReposicion,
         vigente_desde: vigenteDesde,
         tramos,
       });
@@ -104,7 +108,7 @@ export default function CrearTarifa() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-xl font-semibold text-text mb-1">Nueva tarifa</h2>
+      <h1 className="text-xl font-semibold text-text mb-1">Nueva tarifa</h1>
       <p className="text-sm text-muted mb-6">
         Crea una tarifa nueva. Las tarifas anteriores no se modifican; esta se
         aplicará automáticamente desde su fecha de vigencia.
@@ -133,7 +137,7 @@ export default function CrearTarifa() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-text mb-1">
               Cargo fijo
@@ -144,6 +148,21 @@ export default function CrearTarifa() {
               min="0"
               value={cargoFijo}
               onChange={(e) => setCargoFijo(Number(e.target.value))}
+              required
+              className="w-full px-3 py-2 rounded-lg border border-border bg-white text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text mb-1">
+              Fondo de reposición ($/m³)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={valorFondoReposicion}
+              onChange={(e) => setValorFondoReposicion(Number(e.target.value))}
               required
               className="w-full px-3 py-2 rounded-lg border border-border bg-white text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
@@ -267,79 +286,58 @@ export default function CrearTarifa() {
       </form>
 
       {mostrarConfirmacion && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-text mb-1">
-              ¿Confirmas ingresar esta tarifa?
-            </h3>
-            <p className="text-sm text-muted mb-4">
-              Revisa los datos antes de guardar. Recuerda que las tarifas no se
-              pueden editar después.
-            </p>
-
-            <div className="bg-bg border border-border rounded-lg p-4 space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted">Nombre</span>
-                <span className="font-medium text-text">{nombre}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Cargo fijo</span>
-                <span className="font-medium text-text">
-                  ${cargoFijo.toLocaleString("es-CL")}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Vigente desde</span>
-                <span className="font-medium text-text">{vigenteDesde}</span>
-              </div>
-
-              <div className="border-t border-border pt-3">
-                <span className="text-muted block mb-2">Tramos</span>
-                <div className="space-y-1">
-                  {tramos.map((t) => (
-                    <div
-                      key={t.numero_tramo}
-                      className="flex justify-between text-xs"
-                    >
-                      <span className="text-muted">
-                        Tramo {t.numero_tramo}: {t.desde_m3}–{t.hasta_m3 ?? "∞"}{" "}
-                        m³
-                      </span>
-                      <span className="font-medium text-text">
-                        ${t.precio_m3.toLocaleString("es-CL")} / m³
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+        <ConfirmDialog
+          title="¿Confirmas ingresar esta tarifa?"
+          description="Revisa los datos antes de guardar. Recuerda que las tarifas no se pueden editar después."
+          confirmLabel="Sí, ingresar tarifa"
+          cancelLabel="Revisar de nuevo"
+          loading={guardando}
+          error={error}
+          onConfirm={handleConfirmarGuardado}
+          onCancel={() => setMostrarConfirmacion(false)}
+        >
+          <div className="bg-bg border border-border rounded-lg p-4 space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="font-medium text-text">{nombre}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted">Cargo fijo</span>
+              <span className="font-medium text-text">
+                {formatoCLP(cargoFijo)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted">Fondo de reposición</span>
+              <span className="font-medium text-text">
+                {formatoCLP(valorFondoReposicion)} / m³
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted">Vigente desde</span>
+              <span className="font-medium text-text">{vigenteDesde}</span>
             </div>
 
-            {error && (
-              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-4">
-                {error}
+            <div className="border-t border-border pt-3">
+              <span className="text-muted block mb-2">Tramos</span>
+              <div className="space-y-1">
+                {tramos.map((t) => (
+                  <div
+                    key={t.numero_tramo}
+                    className="flex justify-between text-xs"
+                  >
+                    <span className="text-muted">
+                      Tramo {t.numero_tramo}: {t.desde_m3}–{t.hasta_m3 ?? "∞"}{" "}
+                      m³
+                    </span>
+                    <span className="font-medium text-text">
+                      {formatoCLP(t.precio_m3)} / m³
+                    </span>
+                  </div>
+                ))}
               </div>
-            )}
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                type="button"
-                onClick={() => setMostrarConfirmacion(false)}
-                disabled={guardando}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-gray-100 transition-colors disabled:opacity-50"
-              >
-                Revisar de nuevo
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmarGuardado}
-                disabled={guardando}
-                className="bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
-              >
-                {guardando ? "Guardando..." : "Sí, ingresar tarifa"}
-              </button>
             </div>
           </div>
-        </div>
+        </ConfirmDialog>
       )}
     </div>
   );

@@ -34,10 +34,10 @@ export default function ReportePresion() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h2 className="text-xl font-semibold text-text mb-1">
+    <div className="max-w-4xl">
+      <h1 className="text-xl font-semibold text-text mb-1">
         Reporte de presión
-      </h2>
+      </h1>
       <p className="text-sm text-muted mb-6">
         Mediciones de presión de servicio y cumplimiento normativo, para
         presentar en caso de fiscalización.
@@ -93,16 +93,20 @@ export default function ReportePresion() {
       ) : mediciones.length === 0 ? (
         <p className="text-muted">No hay mediciones registradas.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className="overflow-x-auto rounded-xl border border-border bg-surface">
           <table className="min-w-full text-sm">
-            <thead className="bg-bg text-muted">
+            <thead className="bg-primary-light/40 text-text">
               <tr>
-                <th className="text-left px-4 py-2">Punto</th>
-                <th className="text-left px-4 py-2">Ubicación</th>
-                <th className="text-left px-4 py-2">Fecha</th>
-                <th className="text-right px-4 py-2">Presión (mca)</th>
-                <th className="text-left px-4 py-2">Rango normativo</th>
-                <th className="text-center px-4 py-2">Cumple</th>
+                <th className="text-left px-4 py-2 font-medium">Punto</th>
+                <th className="text-left px-4 py-2 font-medium">Ubicación</th>
+                <th className="text-left px-4 py-2 font-medium">Fecha</th>
+                <th className="text-right px-4 py-2 font-medium">
+                  Presión (mca)
+                </th>
+                <th className="text-left px-4 py-2 font-medium">
+                  Rango normativo
+                </th>
+                <th className="text-center px-4 py-2 font-medium">Cumple</th>
               </tr>
             </thead>
             <tbody>
@@ -119,11 +123,11 @@ export default function ReportePresion() {
                   </td>
                   <td className="px-4 py-2 text-center">
                     {m.cumple ? (
-                      <span className="text-xs font-medium bg-primary-light text-primary-dark px-2 py-1 rounded-full">
+                      <span className="text-xs font-medium bg-success-soft text-success px-2 py-1 rounded-full">
                         Sí
                       </span>
                     ) : (
-                      <span className="text-xs font-medium bg-red-50 text-red-600 px-2 py-1 rounded-full">
+                      <span className="text-xs font-medium bg-danger-soft text-danger px-2 py-1 rounded-full">
                         No
                       </span>
                     )}

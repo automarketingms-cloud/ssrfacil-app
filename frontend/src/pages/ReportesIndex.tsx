@@ -32,7 +32,7 @@ const modulos = [
 export default function ReportesIndex() {
   return (
     <div>
-      <h2 className="text-xl font-semibold text-text mb-1">Reportes SISS</h2>
+      <h1 className="text-xl font-semibold text-text mb-1">Reportes SISS</h1>
       <p className="text-sm text-muted mb-6">
         Reportes para fiscalización de la Superintendencia de Servicios
         Sanitarios.

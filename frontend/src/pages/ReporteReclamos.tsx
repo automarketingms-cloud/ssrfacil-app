@@ -38,7 +38,7 @@ export default function ReporteReclamos() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
+    <div className="max-w-5xl space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-text mb-1">
           Libro de Reclamos — Reporte
@@ -149,13 +149,11 @@ function Metrica({
 }) {
   return (
     <div
-      className={`bg-white border rounded-lg p-3 ${
-        alerta ? "border-red-300" : "border-border"
-      }`}
+      className={`bg-surface border rounded-lg p-3 ${alerta ? "border-danger/40" : "border-border"}`}
     >
       <p className="text-xs text-muted">{label}</p>
       <p
-        className={`text-lg font-semibold ${alerta ? "text-red-600" : "text-text"}`}
+        className={`text-lg font-semibold ${alerta ? "text-danger" : "text-text"}`}
       >
         {valor}
       </p>
@@ -172,15 +170,15 @@ function TablaReclamos({
     <div className="overflow-x-auto bg-surface border border-border rounded-xl">
       <table className="min-w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 text-left text-muted">
-            <th className="px-4 py-2">Folio</th>
-            <th className="px-4 py-2">Tipo</th>
-            <th className="px-4 py-2">Reclamante</th>
-            <th className="px-4 py-2">Fecha Recepción</th>
-            <th className="px-4 py-2">Plazo Vencimiento</th>
-            <th className="px-4 py-2">Estado</th>
-            <th className="px-4 py-2">Días Hábiles Respuesta</th>
-            <th className="px-4 py-2">Fuera de Plazo</th>
+          <tr className="bg-primary-light/40 text-text text-left">
+            <th className="px-4 py-2 font-medium">Folio</th>
+            <th className="px-4 py-2 font-medium">Tipo</th>
+            <th className="px-4 py-2 font-medium">Reclamante</th>
+            <th className="px-4 py-2 font-medium">Fecha Recepción</th>
+            <th className="px-4 py-2 font-medium">Plazo Vencimiento</th>
+            <th className="px-4 py-2 font-medium">Estado</th>
+            <th className="px-4 py-2 font-medium">Días Hábiles Respuesta</th>
+            <th className="px-4 py-2 font-medium">Fuera de Plazo</th>
           </tr>
         </thead>
         <tbody>

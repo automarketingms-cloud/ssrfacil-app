@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { obtenerResumenMensual } from "../api/consumos";
 import type { ConsumoResponse } from "../types";
+import { formatoCLP } from "../utils/formato";
 
 export default function ResumenMensual() {
   const [periodo, setPeriodo] = useState("");
@@ -28,9 +29,12 @@ export default function ResumenMensual() {
   const totalGeneral =
     resumen?.reduce((acc, c) => acc + c.total_a_pagar, 0) ?? 0;
 
+  const totalConsumoM3 =
+    resumen?.reduce((acc, c) => acc + c.consumo_m3, 0) ?? 0;
+
   return (
     <div>
-      <h2 className="text-xl font-semibold text-text mb-1">Resumen mensual</h2>
+      <h1 className="text-xl font-semibold text-text mb-1">Resumen mensual</h1>
       <p className="text-sm text-muted mb-6">
         Consumo y total a pagar de todos los clientes en un período.
       </p>
@@ -80,6 +84,9 @@ export default function ResumenMensual() {
                       Consumo (m³)
                     </th>
                     <th className="text-right px-4 py-2 font-medium">
+                      Fondo Repos.
+                    </th>
+                    <th className="text-right px-4 py-2 font-medium">
                       Subsidio
                     </th>
                     <th className="text-right px-4 py-2 font-medium">IVA</th>
@@ -107,17 +114,18 @@ export default function ResumenMensual() {
                         {c.consumo_m3}
                       </td>
                       <td className="px-4 py-2 text-right text-muted">
+                        {formatoCLP(c.cargo_fondo_reposicion)}
+                      </td>
+                      <td className="px-4 py-2 text-right text-muted">
                         {c.subsidio_aplicado > 0
-                          ? `-$${c.subsidio_aplicado.toLocaleString("es-CL")}`
+                          ? `-${formatoCLP(c.subsidio_aplicado)}`
                           : "—"}
                       </td>
                       <td className="px-4 py-2 text-right text-muted">
-                        {c.iva_aplicado > 0
-                          ? `$${c.iva_aplicado.toLocaleString("es-CL")}`
-                          : "—"}
+                        {c.iva_aplicado > 0 ? formatoCLP(c.iva_aplicado) : "—"}
                       </td>
                       <td className="px-4 py-2 text-right font-medium text-text">
-                        ${c.total_a_pagar.toLocaleString("es-CL")}
+                        {formatoCLP(c.total_a_pagar)}
                       </td>
                     </tr>
                   ))}
@@ -126,10 +134,11 @@ export default function ResumenMensual() {
 
               <div className="flex justify-between items-center px-4 py-3 bg-primary-light/20 border-t border-border">
                 <span className="text-sm font-medium text-text">
-                  Total general ({resumen.length} clientes)
+                  Total general ({resumen.length} clientes) · {totalConsumoM3}{" "}
+                  m³ consumidos
                 </span>
                 <span className="text-base font-semibold text-primary-dark">
-                  ${totalGeneral.toLocaleString("es-CL")}
+                  {formatoCLP(totalGeneral)}
                 </span>
               </div>
             </>

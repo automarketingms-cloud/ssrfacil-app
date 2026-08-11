@@ -72,8 +72,8 @@ export default function HistorialLecturas() {
   const mostrarColumnaCliente = clienteId === "";
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-semibold text-text mb-6">
+    <div className="max-w-4xl">
+      <h1 className="text-xl font-semibold text-text mb-6">
         Historial de Lecturas
       </h1>
 
@@ -108,18 +108,20 @@ export default function HistorialLecturas() {
       ) : lecturas.length === 0 ? (
         <p className="text-muted">No hay lecturas para mostrar.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className="overflow-x-auto rounded-xl border border-border bg-surface">
           <table className="min-w-full text-sm">
-            <thead className="bg-bg text-muted">
+            <thead className="bg-primary-light/40 text-text">
               <tr>
                 {mostrarColumnaCliente && (
-                  <th className="text-left px-4 py-2">Cliente</th>
+                  <th className="text-left px-4 py-2 font-medium">Cliente</th>
                 )}
-                <th className="text-left px-4 py-2">Periodo</th>
-                <th className="text-left px-4 py-2">Fecha</th>
-                <th className="text-right px-4 py-2">Lectura</th>
-                <th className="text-right px-4 py-2">Consumo (m³)</th>
-                <th className="text-right px-4 py-2">Acciones</th>
+                <th className="text-left px-4 py-2 font-medium">Periodo</th>
+                <th className="text-left px-4 py-2 font-medium">Fecha</th>
+                <th className="text-right px-4 py-2 font-medium">Lectura</th>
+                <th className="text-right px-4 py-2 font-medium">
+                  Consumo (m³)
+                </th>
+                <th className="text-right px-4 py-2 font-medium">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -142,7 +144,7 @@ export default function HistorialLecturas() {
                               periodo: e.target.value,
                             })
                           }
-                          className="w-24 border border-border rounded px-2 py-1 bg-surface text-text"
+                          className="w-24 border border-border rounded-lg px-2 py-1.5 bg-surface text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                         />
                       </td>
                       <td className="px-4 py-2">
@@ -155,7 +157,7 @@ export default function HistorialLecturas() {
                               fecha_lectura: e.target.value,
                             })
                           }
-                          className="border border-border rounded px-2 py-1 bg-surface text-text"
+                          className="w-24 border border-border rounded-lg px-2 py-1.5 bg-surface text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                         />
                       </td>
                       <td className="px-4 py-2 text-right">
@@ -168,7 +170,7 @@ export default function HistorialLecturas() {
                               lectura_actual: Number(e.target.value),
                             })
                           }
-                          className="w-24 border border-border rounded px-2 py-1 text-right bg-surface text-text"
+                          className="w-24 border border-border rounded-lg px-2 py-1.5 bg-surface text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                         />
                       </td>
                       <td className="px-4 py-2 text-right text-muted">—</td>
@@ -196,7 +198,19 @@ export default function HistorialLecturas() {
                           {clienteMap.get(l.cliente_id) ?? "—"}
                         </td>
                       )}
-                      <td className="px-4 py-2 text-text">{l.periodo}</td>
+                      <td className="px-4 py-2 text-text">
+                        <div className="flex items-center gap-2">
+                          {l.periodo}
+                          {l.es_promedio && (
+                            <span
+                              className="text-xs bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5"
+                              title="Lectura estimada por término medio (no se pudo leer el medidor)"
+                            >
+                              Término medio
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-2 text-text">{l.fecha_lectura}</td>
                       <td className="px-4 py-2 text-right text-text">
                         {l.lectura_actual}

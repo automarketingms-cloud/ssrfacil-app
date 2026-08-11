@@ -6,9 +6,7 @@ from datetime import datetime, date
 from typing import Optional
 
 from app.core.database import get_db
-from app.services.facturacion import (
-    construir_reporte_facturacion
-)
+from app.services.factura import construir_reporte_facturacion
 from app.services.presion import serializar_medicion, obtener_mediciones
 
 from app.services.continuidad import construir_reporte_continuidad
@@ -25,12 +23,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet
 
 
-
-
-
 router = APIRouter(prefix="/reportes", tags=["Reportes"])
-
-
 
 @router.get("/facturacion/{periodo}")
 def reporte_facturacion(periodo: str, db: Session = Depends(get_db)):
@@ -61,15 +54,21 @@ def reporte_facturacion_excel(periodo: str, db: Session = Depends(get_db)):
     ws["A3"] = f"Tarifa vigente: {reporte['tarifa_vigente']}"
     ws["A4"] = f"Clientes facturados: {reporte['cantidad_clientes_facturados']}"
     ws["A5"] = f"Total recaudado: ${reporte['total_recaudado']:,.0f}"
-    ws["A6"] = f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}"
+    ws["A6"] = f"Teléfono de atención: {reporte['telefono_atencion'] or '—'}"
+    ws["A7"] = f"Horario de atención: {reporte['horario_atencion'] or '—'}"
+    ws["A8"] = f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}"
 
     headers = [
         "RUT", "Nombre", "Dirección", "N° Medidor", "Socio", "Subsidio",
-        "Fecha Lectura", "Lectura Anterior", "Lectura Actual", "Consumo m3",
-        "Tarifa", "Cargo Fijo", "Monto Variable", "Subsidio Aplicado",
-        "Subtotal Neto", "IVA Aplicado", "Total a Pagar"
+        "Tipo Facturación", "Fecha Lect. Anterior", "Fecha Lect. Actual",
+        "Lectura Anterior", "Lectura Actual", "Consumo m3",
+        "Tarifa", "Cargo Fijo", "Monto Variable", "Subtotal",
+        "M3 Subsidiados", "% Subsidio", "Subsidio Aplicado",
+        "Subtotal Neto", "IVA Aplicado", "Saldo Anterior", "Interés Mora",
+        "Total a Pagar", "Vencimiento", "Monto Pagado (periodo)",
+        "Fecha Último Pago"
     ]
-    header_row = 8
+    header_row = 10
     for col, h in enumerate(headers, start=1):
         cell = ws.cell(row=header_row, column=col, value=h)
         cell.font = Font(bold=True, color="FFFFFF")
@@ -84,17 +83,31 @@ def reporte_facturacion_excel(periodo: str, db: Session = Depends(get_db)):
         ws.cell(row=row, column=4, value=r["numero_medidor"])
         ws.cell(row=row, column=5, value="Sí" if r["es_socio"] else "No")
         ws.cell(row=row, column=6, value="Sí" if r["tiene_subsidio"] else "No")
-        ws.cell(row=row, column=7, value=str(r["fecha_lectura"]))
-        ws.cell(row=row, column=8, value=r["lectura_anterior"])
-        ws.cell(row=row, column=9, value=r["lectura_actual"])
-        ws.cell(row=row, column=10, value=r["consumo_m3"])
-        ws.cell(row=row, column=11, value=r["tarifa_aplicada"])
-        ws.cell(row=row, column=12, value=r.get("cargo_fijo"))
-        ws.cell(row=row, column=13, value=r.get("monto_variable"))
-        ws.cell(row=row, column=14, value=r.get("subsidio_aplicado"))
-        ws.cell(row=row, column=15, value=r.get("subtotal_neto"))
-        ws.cell(row=row, column=16, value=r.get("iva_aplicado"))
-        ws.cell(row=row, column=17, value=r["total_a_pagar"])
+        ws.cell(row=row, column=7, value=r["tipo_facturacion"])
+        ws.cell(row=row, column=8, value=str(r["fecha_lectura_anterior"]) if r.get("fecha_lectura_anterior") else "—")
+        ws.cell(row=row, column=9, value=str(r["fecha_lectura_actual"]) if r.get("fecha_lectura_actual") else "—")
+        ws.cell(row=row, column=10, value=r["lectura_anterior"])
+        ws.cell(row=row, column=11, value=r["lectura_actual"])
+        ws.cell(row=row, column=12, value=r["consumo_m3"])
+        ws.cell(row=row, column=13, value=r["tarifa_aplicada"])
+        ws.cell(row=row, column=14, value=r.get("cargo_fijo"))
+        ws.cell(row=row, column=15, value=r.get("monto_variable"))
+        ws.cell(row=row, column=16, value=r.get("subtotal"))
+        ws.cell(row=row, column=17, value=r.get("m3_subsidiados") or "—")
+        ws.cell(row=row, column=18, value=r.get("porcentaje_subsidio_aplicado") or "—")
+        ws.cell(row=row, column=19, value=f"-{r['subsidio_aplicado']:,.0f}" if r.get("subsidio_aplicado") else "—")
+        ws.cell(row=row, column=20, value=r.get("subtotal_neto"))
+        ws.cell(row=row, column=21, value=r.get("iva_aplicado"))
+        ws.cell(row=row, column=22, value=r.get("saldo_anterior") or 0)
+        ws.cell(row=row, column=23, value=r.get("interes_mora") or 0)
+        ws.cell(row=row, column=24, value=r["total_a_pagar"])
+        ws.cell(
+            row=row, column=25,
+            value="Corte en Trámite" if r["corte_en_tramite"]
+            else (str(r["fecha_vencimiento"]) if r["fecha_vencimiento"] else "—")
+        )
+        ws.cell(row=row, column=26, value=r.get("monto_pagado_periodo") or 0)
+        ws.cell(row=row, column=27, value=str(r["fecha_ultimo_pago"]) if r.get("fecha_ultimo_pago") else "—")
         row += 1
 
     for col_cells in ws.columns:
@@ -132,15 +145,29 @@ def reporte_facturacion_pdf(periodo: str, db: Session = Depends(get_db)):
         f"Clientes facturados: {reporte['cantidad_clientes_facturados']} | "
         f"Total recaudado: ${reporte['total_recaudado']:,.0f}", styles["Normal"]
     ))
+    elementos.append(Paragraph(
+        f"Teléfono: {reporte['telefono_atencion'] or '—'} | Horario: {reporte['horario_atencion'] or '—'}",
+        styles["Normal"]
+    ))
     elementos.append(Paragraph(f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
     elementos.append(Spacer(1, 0.5 * cm))
 
-    data = [["RUT", "Nombre", "N° Medidor", "Lect. Ant.", "Lect. Act.", "Consumo m3", "Tarifa", "Total a Pagar"]]
+    data = [["RUT", "Nombre", "N° Medidor", "Consumo m3", "Subtotal", "Subsidio", "Saldo Anterior", "Total a Pagar", "Vencimiento"]]
     for r in reporte["detalle"]:
+        vencimiento = (
+            "Corte en Trámite" if r["corte_en_tramite"]
+            else (str(r["fecha_vencimiento"]) if r["fecha_vencimiento"] else "—")
+        )
         data.append([
-            r["rut"], r["nombre_cliente"], r["numero_medidor"],
-            r["lectura_anterior"], r["lectura_actual"], r["consumo_m3"],
-            r["tarifa_aplicada"], f"${r['total_a_pagar']:,.0f}",
+            r["rut"],
+            r["nombre_cliente"],
+            r["numero_medidor"],
+            r["consumo_m3"],
+            f"${r.get('subtotal', 0):,.0f}",
+            f"-${r['subsidio_aplicado']:,.0f}" if r.get("subsidio_aplicado") else "—",
+            f"${r['saldo_anterior']:,.0f}" if r.get("saldo_anterior") else "—",
+            f"${r['total_a_pagar']:,.0f}",
+            vencimiento,
         ])
 
     tabla = Table(data, repeatRows=1)
@@ -164,8 +191,6 @@ def reporte_facturacion_pdf(periodo: str, db: Session = Depends(get_db)):
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
-
-
 
 
 @router.get("/presion/excel")

@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { crearReclamo } from "../api/reclamos";
 import { listarClientes } from "../api/clientes";
 import type { Cliente } from "../types";
+import Textarea from "../components/Textarea";
+import Input from "../components/Input";
+import Select from "../components/Select";
 
 const TIPOS_RECLAMO = [
   "Corte no informado",
@@ -92,27 +95,27 @@ export default function RegistrarReclamo() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className="max-w-2xl">
       <h1 className="text-xl font-semibold text-text mb-4">
         Registrar Reclamo
       </h1>
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-4 bg-surface border border-border rounded-lg p-6"
+        className="space-y-4 bg-surface border border-border rounded-xl p-6"
       >
         <div className="flex gap-4">
           <button
             type="button"
             onClick={() => setTieneCliente(true)}
-            className={`px-4 py-2 rounded ${tieneCliente ? "bg-primary text-white" : "bg-gray-100 text-muted"}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tieneCliente ? "bg-primary text-white" : "bg-gray-100 text-muted hover:bg-gray-200"}`}
           >
             Cliente registrado
           </button>
           <button
             type="button"
             onClick={() => setTieneCliente(false)}
-            className={`px-4 py-2 rounded ${!tieneCliente ? "bg-primary text-white" : "bg-gray-100 text-muted"}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!tieneCliente ? "bg-primary text-white" : "bg-gray-100 text-muted hover:bg-gray-200"}`}
           >
             Sin cliente registrado
           </button>
@@ -120,11 +123,9 @@ export default function RegistrarReclamo() {
 
         {tieneCliente ? (
           <div className="relative">
-            <label className="block text-sm text-muted mb-1">
-              Buscar cliente (nombre o RUT)
-            </label>
-            <input
-              type="text"
+            <Input
+              label="Buscar cliente (nombre o RUT)"
+              name="busqueda_cliente"
               value={
                 clienteSeleccionado ? clienteSeleccionado.nombre : busqueda
               }
@@ -132,11 +133,10 @@ export default function RegistrarReclamo() {
                 setClienteSeleccionado(null);
                 buscarClientes(e.target.value);
               }}
-              className="w-full border border-border rounded px-3 py-2"
               placeholder="Escribe para buscar..."
             />
             {clientes.length > 0 && !clienteSeleccionado && (
-              <div className="absolute z-10 w-full bg-white border border-border rounded mt-1 max-h-48 overflow-y-auto">
+              <div className="absolute z-10 w-full bg-surface border border-border rounded-lg mt-1 max-h-48 overflow-y-auto shadow-md">
                 {clientes.map((c) => (
                   <div
                     key={c.id}
@@ -154,96 +154,68 @@ export default function RegistrarReclamo() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-muted mb-1">
-                Nombre reclamante
-              </label>
-              <input
-                type="text"
-                value={form.nombre_reclamante}
-                onChange={(e) =>
-                  setForm({ ...form, nombre_reclamante: e.target.value })
-                }
-                className="w-full border border-border rounded px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-muted mb-1">
-                RUT reclamante
-              </label>
-              <input
-                type="text"
-                value={form.rut_reclamante}
-                onChange={(e) =>
-                  setForm({ ...form, rut_reclamante: e.target.value })
-                }
-                className="w-full border border-border rounded px-3 py-2"
-              />
-            </div>
+            <Input
+              label="Nombre reclamante"
+              name="nombre_reclamante"
+              value={form.nombre_reclamante}
+              onChange={(e) =>
+                setForm({ ...form, nombre_reclamante: e.target.value })
+              }
+            />
+            <Input
+              label="RUT reclamante"
+              name="rut_reclamante"
+              value={form.rut_reclamante}
+              onChange={(e) =>
+                setForm({ ...form, rut_reclamante: e.target.value })
+              }
+            />
           </div>
         )}
 
-        <div>
-          <label className="block text-sm text-muted mb-1">
-            Dirección del reclamo (opcional)
-          </label>
-          <input
-            type="text"
-            value={form.direccion_reclamo}
-            onChange={(e) =>
-              setForm({ ...form, direccion_reclamo: e.target.value })
-            }
-            className="w-full border border-border rounded px-3 py-2"
-          />
-        </div>
+        <Input
+          label="Dirección del reclamo (opcional)"
+          name="direccion_reclamo"
+          value={form.direccion_reclamo}
+          onChange={(e) =>
+            setForm({ ...form, direccion_reclamo: e.target.value })
+          }
+        />
 
-        <div>
-          <label className="block text-sm text-muted mb-1">
-            Tipo de reclamo
-          </label>
-          <select
-            value={form.tipo_reclamo}
-            onChange={(e) => setForm({ ...form, tipo_reclamo: e.target.value })}
-            className="w-full border border-border rounded px-3 py-2"
-          >
-            {TIPOS_RECLAMO.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Select
+          label="Tipo de reclamo"
+          name="tipo_reclamo"
+          value={form.tipo_reclamo}
+          onChange={(e) => setForm({ ...form, tipo_reclamo: e.target.value })}
+          options={TIPOS_RECLAMO.map((t) => ({ value: t, label: t }))}
+        />
 
-        <div>
-          <label className="block text-sm text-muted mb-1">Descripción</label>
-          <textarea
-            value={form.descripcion}
-            onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-            className="w-full border border-border rounded px-3 py-2"
-            rows={4}
-          />
-        </div>
+        <Textarea
+          label="Descripción"
+          name="descripcion"
+          value={form.descripcion}
+          onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+          rows={4}
+        />
 
-        <div>
-          <label className="block text-sm text-muted mb-1">
-            Observaciones (opcional)
-          </label>
-          <textarea
-            value={form.observaciones}
-            onChange={(e) =>
-              setForm({ ...form, observaciones: e.target.value })
-            }
-            className="w-full border border-border rounded px-3 py-2"
-            rows={2}
-          />
-        </div>
+        <Textarea
+          label="Observaciones (opcional)"
+          name="observaciones"
+          value={form.observaciones}
+          onChange={(e) => setForm({ ...form, observaciones: e.target.value })}
+          rows={2}
+        />
 
-        {error && <p className="text-red-600 text-sm">{error}</p>}
+        {error && (
+          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {error}
+          </div>
+        )}
 
         <button
           type="submit"
           disabled={enviando}
-          className="bg-primary text-white px-4 py-2 rounded disabled:opacity-50"
+          className="bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
         >
           {enviando ? "Guardando..." : "Registrar reclamo"}
         </button>

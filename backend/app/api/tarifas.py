@@ -17,6 +17,7 @@ def crear_tarifa(tarifa: TarifaCreate, db: Session = Depends(get_db)):
     nueva_tarifa = Tarifa(
         nombre=tarifa.nombre,
         cargo_fijo=tarifa.cargo_fijo,
+        valor_fondo_reposicion=tarifa.valor_fondo_reposicion,
         vigente_desde=tarifa.vigente_desde,
     )
     db.add(nueva_tarifa)

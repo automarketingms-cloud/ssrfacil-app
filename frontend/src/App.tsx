@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import RegistrarCliente from "./pages/RegistrarCliente";
 import ListarClientes from "./pages/ListarClientes";
@@ -20,12 +20,18 @@ import ListarReclamos from "./pages/ListarReclamos";
 import RegistrarReclamo from "./pages/RegistrarReclamo";
 import DetalleReclamo from "./pages/DetalleReclamo";
 import ReporteReclamos from "./pages/ReporteReclamos";
+import Dashboard from "./pages/Dashboard";
+import Facturacion from "./pages/Facturacion";
+import RegistrarPago from "./pages/RegistrarPago";
+import Configuracion from "./pages/Configuracion";
+import DetalleFactura from "./pages/DetalleFactura";
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route index element={<Navigate to="/clientes" replace />} />
+          <Route index element={<Dashboard />} />
           <Route path="/clientes" element={<ListarClientes />} />
           <Route path="/clientes/nuevo" element={<RegistrarCliente />} />
           <Route path="/clientes/:id" element={<DetalleCliente />} />
@@ -36,6 +42,9 @@ export default function App() {
           <Route path="/tarifas" element={<ListarTarifas />} />
           <Route path="/tarifas/nueva" element={<CrearTarifa />} />
           <Route path="/resumen" element={<ResumenMensual />} />
+          <Route path="/facturas" element={<Facturacion />} />
+          <Route path="/facturas/:id" element={<DetalleFactura />} />
+          <Route path="/pagos" element={<RegistrarPago />} />
           <Route path="/reportes" element={<ReportesIndex />} />
           <Route path="/presion" element={<RegistrarPresion />} />
           <Route path="/reportes/presion" element={<ReportePresion />} />
@@ -52,6 +61,7 @@ export default function App() {
           <Route path="/reclamos/nuevo" element={<RegistrarReclamo />} />
           <Route path="/reclamos/:id" element={<DetalleReclamo />} />
           <Route path="/reportes/reclamos" element={<ReporteReclamos />} />
+          <Route path="/configuracion" element={<Configuracion />} />
         </Route>
       </Routes>
     </BrowserRouter>

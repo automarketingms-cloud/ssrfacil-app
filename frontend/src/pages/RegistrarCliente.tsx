@@ -74,9 +74,9 @@ export default function RegistrarCliente() {
 
   return (
     <div className="max-w-lg">
-      <h2 className="text-xl font-semibold text-text mb-1">
+      <h1 className="text-xl font-semibold text-text mb-1">
         Registrar Cliente
-      </h2>
+      </h1>
       <p className="text-sm text-muted mb-6">
         Ingresa los datos del nuevo cliente de la APR.
       </p>

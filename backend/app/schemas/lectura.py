@@ -6,10 +6,11 @@ class LecturaCreate(BaseModel):
     fecha_lectura: date
     periodo: str  # ej: "2026-07"
     lectura_actual: float
+    es_promedio: bool = False
 
 class LecturaResponse(LecturaCreate):
     id: int
-    consumo_m3: float
+    consumo_m3: float | None = None
 
     class Config:
         from_attributes = True
@@ -18,3 +19,9 @@ class LecturaUpdate(BaseModel):
     fecha_lectura: date | None = None
     periodo: str | None = None
     lectura_actual: float | None = None
+    es_promedio: bool | None = None
+
+class LecturaTerminoMedioCreate(BaseModel):
+    cliente_id: int
+    periodo: str
+    fecha_lectura: date

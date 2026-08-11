@@ -4,16 +4,9 @@ import Input from "../components/Input";
 import { listarClientes } from "../api/clientes";
 import { obtenerConsumo } from "../api/consumos";
 import type { Cliente, ConsumoResponse } from "../types";
+import { formatoCLP } from "../utils/formato";
 
 const currentPeriodo = new Date().toISOString().slice(0, 7);
-
-function formatoCLP(valor: number) {
-  return valor.toLocaleString("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  });
-}
 
 export default function VerConsumo() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -49,7 +42,7 @@ export default function VerConsumo() {
 
   return (
     <div className="max-w-xl">
-      <h2 className="text-xl font-semibold text-text mb-1">Ver Consumo</h2>
+      <h1 className="text-xl font-semibold text-text mb-1">Ver Consumo</h1>
       <p className="text-sm text-muted mb-6">
         Consulta el consumo y total a pagar de un cliente para un período.
       </p>
@@ -166,10 +159,23 @@ export default function VerConsumo() {
               </span>
             </div>
 
+            <div className="flex justify-between text-sm">
+              <span className="text-muted">
+                Fondo de reposición y reinversión ({consumo.consumo_m3} m³)
+              </span>
+              <span className="text-text">
+                {formatoCLP(consumo.cargo_fondo_reposicion)}
+              </span>
+            </div>
+
             <div className="flex justify-between text-sm font-medium border-t border-border pt-2 mt-1">
               <span className="text-text">Subtotal</span>
               <span className="text-text">
-                {formatoCLP(consumo.cargo_fijo + consumo.monto_variable)}
+                {formatoCLP(
+                  consumo.cargo_fijo +
+                    consumo.monto_variable +
+                    consumo.cargo_fondo_reposicion,
+                )}
               </span>
             </div>
 
@@ -177,7 +183,7 @@ export default function VerConsumo() {
               <>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted">Descuento por subsidio</span>
-                  <span className="text-red-600">
+                  <span className="text-danger">
                     − {formatoCLP(consumo.subsidio_aplicado)}
                   </span>
                 </div>

@@ -8,6 +8,8 @@ import {
   type Reclamo,
 } from "../api/reclamos";
 
+import Textarea from "../components/Textarea";
+
 function hoyISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -105,7 +107,7 @@ export default function DetalleReclamo() {
     reclamo.estado === "abierto" && reclamo.plazo_vencimiento < hoyISO();
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className="max-w-2xl">
       <button
         onClick={() => navigate("/reclamos")}
         className="text-primary text-sm mb-4"
@@ -113,12 +115,21 @@ export default function DetalleReclamo() {
         ← Volver al listado
       </button>
 
-      <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+      <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-text">
             Reclamo {reclamo.folio}
           </h1>
-          <span className="px-3 py-1 rounded text-sm bg-gray-100 text-text">
+          <span
+            className={`px-3 py-1 rounded-full text-sm font-medium ${
+              {
+                abierto: "bg-warning-soft text-warning",
+                respondido: "bg-primary-light text-primary-dark",
+                cerrado: "bg-success-soft text-success",
+                cerrado_sin_respuesta: "bg-gray-100 text-muted",
+              }[reclamo.estado]
+            }`}
+          >
             {ETIQUETAS_ESTADO[reclamo.estado]}
           </span>
         </div>
@@ -208,7 +219,7 @@ export default function DetalleReclamo() {
                 </button>
                 <button
                   onClick={() => setMostrarFormCierreDirecto(true)}
-                  className="bg-gray-100 text-text px-4 py-2 rounded"
+                  className="bg-gray-100 hover:bg-gray-200 text-text text-sm font-medium rounded-lg px-4 py-2 transition-colors"
                 >
                   Cerrar sin respuesta
                 </button>
@@ -217,13 +228,15 @@ export default function DetalleReclamo() {
 
             {mostrarFormRespuesta && (
               <div className="space-y-2">
-                <textarea
+                <Textarea
+                  label="Respuesta"
+                  name="respuesta"
                   value={respuestaTexto}
                   onChange={(e) => setRespuestaTexto(e.target.value)}
-                  className="w-full border border-border rounded px-3 py-2"
                   rows={4}
                   placeholder="Escribe la respuesta al reclamante..."
                 />
+
                 <div className="flex gap-3">
                   <button
                     onClick={handleResponder}
@@ -243,17 +256,18 @@ export default function DetalleReclamo() {
 
             {mostrarFormCierreDirecto && (
               <div className="space-y-2">
-                <textarea
+                <Textarea
+                  label="Motivo de cierre"
+                  name="motivo_cierre"
                   value={motivoCierre}
                   onChange={(e) => setMotivoCierre(e.target.value)}
-                  className="w-full border border-border rounded px-3 py-2"
                   rows={2}
                   placeholder="Motivo del cierre (ej. reclamo retirado, duplicado, no procede)..."
                 />
                 <div className="flex gap-3">
                   <button
                     onClick={handleCerrarSinRespuesta}
-                    className="bg-gray-800 text-white px-4 py-2 rounded"
+                    className="bg-gray-800 hover:bg-gray-900 text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
                   >
                     Confirmar cierre
                   </button>

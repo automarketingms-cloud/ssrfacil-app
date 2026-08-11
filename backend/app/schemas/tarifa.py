@@ -24,6 +24,7 @@ class TarifaTramoResponse(TarifaTramoBase):
 class TarifaCreate(BaseModel):
     nombre: str
     cargo_fijo: float
+    valor_fondo_reposicion: float = Field(ge=0, default=0)
     vigente_desde: date
     tramos: List[TarifaTramoCreate]
 
@@ -32,6 +33,7 @@ class TarifaResponse(BaseModel):
     id: int
     nombre: str
     cargo_fijo: float
+    valor_fondo_reposicion: float
     vigente_desde: date
     tramos: List[TarifaTramoResponse]
 

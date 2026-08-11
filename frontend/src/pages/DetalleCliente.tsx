@@ -51,35 +51,35 @@ export default function DetalleCliente() {
   }
 
   if (loading) {
-    return <div className="p-6 text-gray-500">Cargando...</div>;
+    return <p className="text-sm text-muted">Cargando...</p>;
   }
-
   if (error) {
-    return <div className="p-6 text-red-600">{error}</div>;
+    return (
+      <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        {error}
+      </div>
+    );
   }
-
   if (!cliente) {
-    return <div className="p-6 text-gray-500">Cliente no encontrado.</div>;
+    return <p className="text-sm text-muted">Cliente no encontrado.</p>;
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">
-          {cliente.nombre}
-        </h1>
+        <h1 className="text-xl font-semibold text-text">{cliente.nombre}</h1>
         <span
           className={`px-3 py-1 rounded-full text-sm font-medium ${
             cliente.activo
-              ? "bg-sky-100 text-sky-700"
-              : "bg-gray-200 text-gray-600"
+              ? "bg-success-soft text-success"
+              : "bg-danger-soft text-danger"
           }`}
         >
           {cliente.activo ? "Activo" : "Inactivo"}
         </span>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100">
+      <div className="bg-surface rounded-xl border border-border divide-y divide-border">
         <Dato label="RUT" valor={cliente.rut} />
         <Dato label="Dirección" valor={cliente.direccion} />
         <Dato label="N° medidor" valor={cliente.numero_medidor} />
@@ -98,14 +98,14 @@ export default function DetalleCliente() {
       <div className="flex gap-3 mt-6">
         <Link
           to={`/clientes/${cliente.id}/editar`}
-          className="px-4 py-2 rounded-lg bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 transition"
+          className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors"
         >
           Editar
         </Link>
         <button
           onClick={handleToggleActivo}
           disabled={procesando}
-          className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition disabled:opacity-50"
+          className="px-4 py-2 rounded-lg bg-gray-100 text-text text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
         >
           {procesando
             ? "Procesando..."
@@ -115,7 +115,7 @@ export default function DetalleCliente() {
         </button>
         <button
           onClick={() => navigate("/clientes")}
-          className="px-4 py-2 rounded-lg text-gray-500 text-sm font-medium hover:bg-gray-100 transition ml-auto"
+          className="px-4 py-2 rounded-lg text-muted text-sm font-medium hover:bg-gray-100 transition-colors ml-auto"
         >
           Volver
         </button>
@@ -127,8 +127,8 @@ export default function DetalleCliente() {
 function Dato({ label, valor }: { label: string; valor: string | number }) {
   return (
     <div className="flex justify-between px-5 py-3">
-      <span className="text-sm text-gray-500">{label}</span>
-      <span className="text-sm font-medium text-gray-800">{valor}</span>
+      <span className="text-sm text-muted">{label}</span>
+      <span className="text-sm font-medium text-text">{valor}</span>
     </div>
   );
 }

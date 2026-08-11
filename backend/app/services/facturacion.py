@@ -20,15 +20,65 @@ def obtener_lectura_anterior(db: Session, cliente_id: int, periodo_actual: str) 
     return 0.0
 
 
-def calcular_consumo(lectura_actual: float, lectura_anterior: float) -> float:
+def calcular_consumo(lectura_actual: float, lectura_anterior: float, permitir_negativo: bool = False) -> float:
     """
-    Calcula el consumo en m3. Nunca debería ser negativo
-    (si pasa, es un error de digitación o el medidor dio la vuelta).
+    Calcula el consumo en m3. Por defecto no permite negativo (error de
+    digitación o el medidor dio la vuelta). Cuando la lectura anterior
+    vino de término medio (estimada), sí puede dar negativo si el
+    consumo real fue menor al estimado — en ese caso el llamador debe
+    pasar permitir_negativo=True para aceptarlo (el ajuste se resuelve
+    como crédito a favor del cliente al generar la factura).
     """
     consumo = lectura_actual - lectura_anterior
-    if consumo < 0:
+    if consumo < 0 and not permitir_negativo:
         raise ValueError("La lectura actual no puede ser menor a la anterior")
     return consumo
+
+def calcular_consumo_promedio(db: Session, cliente_id: int, periodo_actual: str) -> tuple[float, int]:
+    """
+    Calcula el consumo promedio (término medio) para un cliente que no
+    pudo ser leído en el periodo actual, según el Capítulo 4 del manual
+    SISS: promedio de los consumos de los últimos 3 meses facturados con
+    lectura REAL (se excluyen periodos que ya fueron por término medio,
+    para no acumular error sobre estimaciones).
+    A falta de 3 meses disponibles, se usa el promedio de los que existan.
+    Devuelve (consumo_promedio, cantidad_meses_considerados).
+    Lanza ValueError si no hay al menos 2 lecturas reales previas (se
+    necesitan 2 lecturas consecutivas para obtener 1 consumo).
+    """
+    lecturas_reales = (
+        db.query(Lectura)
+        .filter(
+            Lectura.cliente_id == cliente_id,
+            Lectura.periodo < periodo_actual,
+            Lectura.es_promedio == False,
+        )
+        .order_by(Lectura.periodo.desc())
+        .limit(4)
+        .all()
+    )
+    if len(lecturas_reales) < 2:
+        raise ValueError(
+            "No hay suficiente historial de lecturas reales para calcular término medio "
+            "(se necesitan al menos 2 lecturas previas)"
+        )
+
+    lecturas_reales.reverse()  # orden cronológico ascendente para restar en orden
+
+    consumos = []
+    for i in range(1, len(lecturas_reales)):
+        consumo = lecturas_reales[i].lectura_actual - lecturas_reales[i - 1].lectura_actual
+        if consumo >= 0:
+            consumos.append(consumo)
+
+    consumos_recientes = consumos[-3:]
+    if not consumos_recientes:
+        raise ValueError("No fue posible calcular consumos válidos a partir del historial")
+
+    promedio = sum(consumos_recientes) / len(consumos_recientes)
+    promedio_truncado = float(int(promedio))  # truncar decimal, no redondear (regla del manual)
+
+    return promedio_truncado, len(consumos_recientes)
 
 
 def obtener_tarifa_vigente(db: Session, periodo: str) -> Tarifa:
@@ -92,14 +142,21 @@ IVA_PORCENTAJE = 0.19
 
 def calcular_total_a_pagar(consumo_m3: float, tarifa: Tarifa, cliente: Cliente) -> dict:
     """
-    Calcula el desglose de cobro: cargo fijo + variable por tramos - subsidio + IVA (si no es socio).
+    Calcula el desglose de cobro: cargo fijo + variable por tramos +
+    cargo fondo de reposición y reinversión - subsidio + IVA (si no es socio).
+    El cargo fondo de reposición se calcula como consumo_m3 * valor_fondo_reposicion
+    de la tarifa (precio fijo por m3, NO por tramos).
     El subsidio (si el cliente lo tiene) se aplica como porcentaje SOLO sobre
-    (cargo_fijo + subtotal del tramo 1).
-    El IVA (19%) se aplica sobre el NETO (cargo_fijo + monto_variable - subsidio),
-    solo a clientes que no son socios.
+    (cargo_fijo + subtotal del tramo 1) — no afecta el fondo de reposición.
+    El IVA (19%) se aplica sobre el NETO (cargo_fijo + monto_variable +
+    cargo_fondo_reposicion - subsidio), solo a clientes que no son socios.
     """
     detalle_tramos = calcular_consumo_por_tramos(consumo_m3, tarifa.tramos)
     monto_variable = round(sum(t["subtotal"] for t in detalle_tramos), 2)
+
+    cargo_fondo_reposicion = round(consumo_m3 * tarifa.valor_fondo_reposicion, 2)
+
+    subtotal = round(tarifa.cargo_fijo + monto_variable + cargo_fondo_reposicion, 2)
 
     subsidio_monto = 0.0
     if cliente.tiene_subsidio and cliente.porcentaje_subsidio > 0:
@@ -108,7 +165,9 @@ def calcular_total_a_pagar(consumo_m3: float, tarifa: Tarifa, cliente: Cliente) 
             base_subsidio = tarifa.cargo_fijo + tramo_1["subtotal"]
             subsidio_monto = round(base_subsidio * cliente.porcentaje_subsidio, 2)
 
-    subtotal_neto = tarifa.cargo_fijo + monto_variable - subsidio_monto
+    subtotal_neto = (
+        tarifa.cargo_fijo + monto_variable + cargo_fondo_reposicion - subsidio_monto
+    )
 
     iva_monto = 0.0
     if not cliente.es_socio:
@@ -120,59 +179,11 @@ def calcular_total_a_pagar(consumo_m3: float, tarifa: Tarifa, cliente: Cliente) 
         "cargo_fijo": tarifa.cargo_fijo,
         "detalle_tramos": detalle_tramos,
         "monto_variable": monto_variable,
+        "cargo_fondo_reposicion": cargo_fondo_reposicion,
+        "subtotal": subtotal,
         "subsidio_aplicado": subsidio_monto,
         "subtotal_neto": round(subtotal_neto, 2),
         "iva_aplicado": iva_monto,
         "total_a_pagar": round(total, 2),
     }
 
-def construir_reporte_facturacion(periodo: str, db: Session) -> dict:
-    """
-    Arma el reporte de facturación con respaldo para un periodo dado.
-    Usado por el endpoint JSON y los exports (Excel/PDF).
-    Lanza ValueError si no hay lecturas o no hay tarifa vigente.
-    """
-    lecturas = db.query(Lectura).filter(Lectura.periodo == periodo).all()
-    if not lecturas:
-        raise ValueError("No hay lecturas registradas para este periodo")
-
-    tarifa = obtener_tarifa_vigente(db, periodo)
-
-    detalle = []
-    total_recaudado = 0.0
-
-    for lectura in lecturas:
-        cliente = db.query(Cliente).filter(Cliente.id == lectura.cliente_id).first()
-        if not cliente:
-            continue  # cliente_id huerfano o eliminado, se omite del reporte
-
-        lectura_anterior = obtener_lectura_anterior(db, lectura.cliente_id, periodo)
-        consumo = calcular_consumo(lectura.lectura_actual, lectura_anterior)
-        desglose = calcular_total_a_pagar(consumo, tarifa, cliente)
-
-        registro = {
-            "cliente_id": cliente.id,
-            "nombre_cliente": cliente.nombre,
-            "rut": cliente.rut,
-            "direccion": cliente.direccion,
-            "numero_medidor": cliente.numero_medidor,
-            "es_socio": cliente.es_socio,
-            "tiene_subsidio": cliente.tiene_subsidio,
-            "periodo": periodo,
-            "fecha_lectura": lectura.fecha_lectura,
-            "lectura_anterior": lectura_anterior,
-            "lectura_actual": lectura.lectura_actual,
-            "consumo_m3": consumo,
-            "tarifa_aplicada": tarifa.nombre,
-            **desglose,
-        }
-        detalle.append(registro)
-        total_recaudado += registro["total_a_pagar"]
-
-    return {
-        "periodo": periodo,
-        "tarifa_vigente": tarifa.nombre,
-        "cantidad_clientes_facturados": len(detalle),
-        "total_recaudado": round(total_recaudado, 2),
-        "detalle": detalle,
-    }

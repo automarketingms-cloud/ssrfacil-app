@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listarTarifas, eliminarTarifa } from "../api/tarifas";
 import type { Tarifa } from "../types";
+import { formatoCLP } from "../utils/formato";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 export default function ListarTarifas() {
   const navigate = useNavigate();
@@ -49,7 +51,7 @@ export default function ListarTarifas() {
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-xl font-semibold text-text">Tarifas</h2>
+        <h1 className="text-xl font-semibold text-text">Tarifas</h1>
         <button
           onClick={() => navigate("/tarifas/nueva")}
           className="bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
@@ -86,8 +88,8 @@ export default function ListarTarifas() {
                 >
                   <p className="text-sm font-medium text-text">{t.nombre}</p>
                   <p className="text-xs text-muted">
-                    Vigente desde {t.vigente_desde} · Cargo fijo $
-                    {t.cargo_fijo.toLocaleString("es-CL")}
+                    Vigente desde {t.vigente_desde} · Cargo fijo{" "}
+                    {formatoCLP(t.cargo_fijo)}
                   </p>
                 </button>
 
@@ -144,7 +146,7 @@ export default function ListarTarifas() {
                             {tramo.hasta_m3 ?? "En adelante"}
                           </td>
                           <td className="px-4 py-2 text-muted">
-                            ${tramo.precio_m3.toLocaleString("es-CL")}
+                            {formatoCLP(tramo.precio_m3)}
                           </td>
                         </tr>
                       ))}
@@ -157,34 +159,15 @@ export default function ListarTarifas() {
       )}
 
       {tarifaAEliminar && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6">
-            <h3 className="text-lg font-semibold text-text mb-1">
-              ¿Eliminar esta tarifa?
-            </h3>
-            <p className="text-sm text-muted mb-4">
-              Vas a eliminar <strong>{tarifaAEliminar.nombre}</strong> (vigente
-              desde {tarifaAEliminar.vigente_desde}). Esta acción no se puede
-              deshacer.
-            </p>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setTarifaAEliminar(null)}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-gray-100 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleConfirmarEliminar}
-                disabled={eliminando !== null}
-                className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
-              >
-                Sí, eliminar
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="¿Eliminar esta tarifa?"
+          description={`Vas a eliminar ${tarifaAEliminar.nombre} (vigente desde ${tarifaAEliminar.vigente_desde}). Esta acción no se puede deshacer.`}
+          confirmLabel="Sí, eliminar"
+          loading={eliminando !== null}
+          danger
+          onConfirm={handleConfirmarEliminar}
+          onCancel={() => setTarifaAEliminar(null)}
+        />
       )}
     </div>
   );

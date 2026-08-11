@@ -79,7 +79,7 @@ export default function EditarCliente() {
 
   return (
     <div className="max-w-lg">
-      <h2 className="text-xl font-semibold text-text mb-1">Editar cliente</h2>
+      <h1 className="text-xl font-semibold text-text mb-1">Editar cliente</h1>
       <p className="text-sm text-muted mb-6">
         Modifica los datos del cliente y guarda los cambios.
       </p>
