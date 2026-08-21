@@ -1,4 +1,4 @@
-import type { Cliente } from "../types";
+import type { Cliente, ClienteListResponse } from "../types";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -20,7 +20,10 @@ export async function crearCliente(
 export async function listarClientes(filtros?: {
   activo?: boolean;
   es_socio?: boolean;
-}): Promise<Cliente[]> {
+  q?: string;
+  page?: number;
+  limit?: number;
+}): Promise<ClienteListResponse> {
   const params = new URLSearchParams();
   if (filtros?.activo !== undefined) {
     params.set("activo", String(filtros.activo));
@@ -28,7 +31,12 @@ export async function listarClientes(filtros?: {
   if (filtros?.es_socio !== undefined) {
     params.set("es_socio", String(filtros.es_socio));
   }
-  const query = params.toString() ? `?${params.toString()}` : "";
+  if (filtros?.q) {
+    params.set("q", filtros.q);
+  }
+  params.set("page", String(filtros?.page ?? 1));
+  params.set("limit", String(filtros?.limit ?? 20));
+  const query = `?${params.toString()}`;
   const res = await fetch(`${API_URL}/clientes/${query}`);
   if (!res.ok) throw new Error("Error al obtener clientes");
   return res.json();

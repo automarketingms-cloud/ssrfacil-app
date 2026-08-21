@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_
 from datetime import date
 
 from app.core.database import get_db
 from app.models.cliente import Cliente
-from app.schemas.cliente import ClienteCreate, ClienteUpdate, ClienteResponse
+from app.schemas.cliente import ClienteResponse, ClienteCreate, ClienteUpdate, ClienteListResponse
 
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
 
@@ -25,10 +26,13 @@ def crear_cliente(cliente: ClienteCreate, db: Session = Depends(get_db)):
     db.refresh(nuevo_cliente)
     return nuevo_cliente
 
-@router.get("/", response_model=list[ClienteResponse])
+@router.get("/", response_model=ClienteListResponse)
 def listar_clientes(
     activo: bool | None = None,
     es_socio: bool | None = None,
+    q: str | None = None,
+    page: int = 1,
+    limit: int = 20,
     db: Session = Depends(get_db),
 ):
     query = db.query(Cliente)
@@ -36,7 +40,21 @@ def listar_clientes(
         query = query.filter(Cliente.activo == activo)
     if es_socio is not None:
         query = query.filter(Cliente.es_socio == es_socio)
-    return query.order_by(Cliente.nombre).all()
+    if q:
+        termino = f"%{q}%"
+        query = query.filter(
+            or_(Cliente.nombre.ilike(termino), Cliente.rut.ilike(termino))
+        )
+
+    total = query.count()
+    clientes = (
+        query.order_by(Cliente.nombre)
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+
+    return {"items": clientes, "total": total, "page": page, "limit": limit}
 
 
 @router.get("/buscar/{rut}", response_model=ClienteResponse)

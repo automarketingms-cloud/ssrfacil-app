@@ -22,3 +22,6 @@ class Configuracion(Base):
     # Tasa de interés corriente (CMF), anual, en %. Ej: 27.04 = 27.04% anual.
     # Se actualiza manualmente cuando la CMF publica un nuevo valor mensual.
     tasa_interes_mora = Column(Float, nullable=False, default=0)
+    tasa_iva = Column(Float, nullable=False, default=19.0)
+
+    numero_medidor_matriz = Column(String, nullable=True)

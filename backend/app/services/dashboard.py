@@ -1,13 +1,13 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from datetime import date
 
 from app.models.cliente import Cliente
 from app.models.reclamo import Reclamo
 from app.models.factura import Factura
 from app.models.pago import Pago
-from app.services.factura import construir_reporte_facturacion
-from app.services.continuidad import listar_cortes
-from app.services.pago import calcular_saldo_factura
+from sqlalchemy import case
+from app.services.continuidad import contar_cortes_activos
 
 
 def _periodos_anteriores(periodo: str, cantidad: int) -> list[str]:
@@ -26,35 +26,51 @@ def _periodos_anteriores(periodo: str, cantidad: int) -> list[str]:
 
 def construir_resumen_dashboard(db: Session, periodo: str) -> dict:
     # --- Clientes ---
-    clientes_activos = db.query(Cliente).filter(Cliente.activo == True).all()
-    total_clientes_activos = len(clientes_activos)
-    total_socios = len([c for c in clientes_activos if c.es_socio])
-    total_con_subsidio = len([c for c in clientes_activos if c.tiene_subsidio])
+    total_clientes_activos, total_socios, total_con_subsidio = (
+        db.query(
+            func.count(Cliente.id),
+            func.sum(case((Cliente.es_socio == True, 1), else_=0)),
+            func.sum(case((Cliente.tiene_subsidio == True, 1), else_=0)),
+        )
+        .filter(Cliente.activo == True)
+        .first()
+    )
+    total_clientes_activos = total_clientes_activos or 0
+    total_socios = total_socios or 0
+    total_con_subsidio = total_con_subsidio or 0
 
     # --- Facturación y consumo del mes ---
-    try:
-        reporte = construir_reporte_facturacion(periodo, db)
-        facturacion_total_mes = reporte["total_recaudado"]
-        consumo_total_m3 = round(sum(d["consumo_m3"] for d in reporte["detalle"]), 2)
-        lecturas_realizadas = reporte["cantidad_clientes_facturados"]
-    except ValueError:
-        facturacion_total_mes = 0.0
-        consumo_total_m3 = 0.0
-        lecturas_realizadas = 0
-
+    total_facturado, total_consumo, cantidad_facturas = (
+        db.query(
+            func.sum(Factura.total_a_pagar),
+            func.sum(Factura.consumo_m3),
+            func.count(Factura.id),
+        )
+        .filter(Factura.periodo == periodo)
+        .first()
+    )
+    facturacion_total_mes = round(total_facturado or 0.0, 2)
+    consumo_total_m3 = round(total_consumo or 0.0, 2)
+    lecturas_realizadas = cantidad_facturas or 0
     medidores_sin_lectura = max(total_clientes_activos - lecturas_realizadas, 0)
 
     # --- Reclamos ---
     hoy = date.today()
-    reclamos_abiertos = db.query(Reclamo).filter(Reclamo.estado == "abierto").all()
-    total_reclamos_abiertos = len(reclamos_abiertos)
-    total_reclamos_fuera_de_plazo = len(
-        [r for r in reclamos_abiertos if r.plazo_vencimiento < hoy]
+    total_reclamos_abiertos = (
+        db.query(func.count(Reclamo.id))
+        .filter(Reclamo.estado == "abierto")
+        .scalar()
+        or 0
+    )
+    total_reclamos_fuera_de_plazo = (
+        db.query(func.count(Reclamo.id))
+        .filter(Reclamo.estado == "abierto", Reclamo.plazo_vencimiento < hoy)
+        .scalar()
+        or 0
     )
 
     # --- Cortes ---
-    cortes_activos = listar_cortes(db, solo_abiertos=True)
-    total_cortes_activos = len(cortes_activos)
+    total_cortes_activos = contar_cortes_activos(db)
 
     # --- Pendiente de cobro y morosos ---
     facturas_con_saldo = (
@@ -62,33 +78,54 @@ def construir_resumen_dashboard(db: Session, periodo: str) -> dict:
         .filter(Factura.estado.in_(["pendiente", "parcial", "vencida"]))
         .all()
     )
+
+    facturas_con_saldo_ids = [f.id for f in facturas_con_saldo]
+    pagos_por_factura: dict[int, float] = {}
+    if facturas_con_saldo_ids:
+        rows = (
+            db.query(Pago.factura_id, func.sum(Pago.monto))
+            .filter(Pago.factura_id.in_(facturas_con_saldo_ids))
+            .group_by(Pago.factura_id)
+            .all()
+        )
+        pagos_por_factura = {factura_id: monto or 0.0 for factura_id, monto in rows}
+
     monto_pendiente_cobro = round(
-        sum(calcular_saldo_factura(db, f) for f in facturas_con_saldo), 2
+        sum(
+            f.total_a_pagar - pagos_por_factura.get(f.id, 0.0)
+            for f in facturas_con_saldo
+        ),
+        2,
     )
     clientes_morosos = len(
         {f.cliente_id for f in facturas_con_saldo if f.estado == "vencida"}
     )
 
     # --- Facturación últimos 6 meses (para el gráfico) ---
-    facturacion_historica = []
-    for p in _periodos_anteriores(periodo, 6):
-        try:
-            total_facturado = construir_reporte_facturacion(p, db)["total_recaudado"]
-        except ValueError:
-            total_facturado = 0.0
+    periodos_historicos = _periodos_anteriores(periodo, 6)
 
-        total_cobrado = (
-            db.query(Pago)
-            .join(Factura, Pago.factura_id == Factura.id)
-            .filter(Factura.periodo == p)
-            .with_entities(Pago.monto)
-            .all()
-        )
-        total_cobrado = round(sum(m[0] for m in total_cobrado), 2)
+    facturado_por_periodo = dict(
+        db.query(Factura.periodo, func.sum(Factura.total_a_pagar))
+        .filter(Factura.periodo.in_(periodos_historicos))
+        .group_by(Factura.periodo)
+        .all()
+    )
+    cobrado_por_periodo = dict(
+        db.query(Factura.periodo, func.sum(Pago.monto))
+        .join(Pago, Pago.factura_id == Factura.id)
+        .filter(Factura.periodo.in_(periodos_historicos))
+        .group_by(Factura.periodo)
+        .all()
+    )
 
-        facturacion_historica.append(
-            {"periodo": p, "facturado": total_facturado, "cobrado": total_cobrado}
-        )
+    facturacion_historica = [
+        {
+            "periodo": p,
+            "facturado": round(facturado_por_periodo.get(p) or 0.0, 2),
+            "cobrado": round(cobrado_por_periodo.get(p) or 0.0, 2),
+        }
+        for p in periodos_historicos
+    ]
 
     return {
         "periodo": periodo,

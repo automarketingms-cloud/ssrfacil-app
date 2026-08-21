@@ -1,7 +1,8 @@
 // pages/ListarReclamos.tsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { listarReclamos, type Reclamo } from "../api/reclamos";
+import { listarReclamos } from "../api/reclamos";
+import type { Reclamo } from "../types";
 
 const ESTADOS = [
   { value: "", label: "Todos" },

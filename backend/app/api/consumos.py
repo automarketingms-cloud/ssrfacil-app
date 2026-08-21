@@ -4,12 +4,13 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.cliente import Cliente
 from app.models.lectura import Lectura
-from app.services.facturacion import (
+from app.services.calculo_tarifa import (
     obtener_lectura_anterior,
     calcular_consumo,
     obtener_tarifa_vigente,
     calcular_total_a_pagar,
 )
+from app.services.configuracion import obtener_configuracion
 
 router = APIRouter(prefix="/consumos", tags=["Consumos"])
 
@@ -36,7 +37,8 @@ def obtener_consumo_y_cobro(cliente_id: int, periodo: str, db: Session = Depends
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    desglose = calcular_total_a_pagar(consumo, tarifa, cliente)
+    config = obtener_configuracion(db)
+    desglose = calcular_total_a_pagar(consumo, tarifa, cliente, config.tasa_iva)
 
     return {
         "cliente_id": cliente.id,
@@ -63,15 +65,17 @@ def resumen_mensual(periodo: str, db: Session = Depends(get_db)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    config = obtener_configuracion(db)
+
     resultado = []
     for lectura in lecturas:
         cliente = db.query(Cliente).filter(Cliente.id == lectura.cliente_id).first()
         if not cliente:
-            continue  # cliente_id huerfano o eliminado, se omite del resumen
+            continue
 
         lectura_anterior = obtener_lectura_anterior(db, lectura.cliente_id, periodo)
         consumo = calcular_consumo(lectura.lectura_actual, lectura_anterior)
-        desglose = calcular_total_a_pagar(consumo, tarifa, cliente)
+        desglose = calcular_total_a_pagar(consumo, tarifa, cliente, config.tasa_iva)
 
         resultado.append({
             "cliente_id": cliente.id,

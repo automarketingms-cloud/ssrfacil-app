@@ -10,3 +10,4 @@ class MedicionPresionCreate(BaseModel):
     hora_medicion: Optional[time] = None
     presion_mca: float = Field(gt=0)
     observaciones: Optional[str] = None
+    reclamo_id: Optional[int] = None

@@ -12,8 +12,16 @@ from app.services.presion import serializar_medicion, obtener_mediciones
 router = APIRouter(prefix="/presion", tags=["Presión"])
 
 
+from fastapi import APIRouter, Depends, HTTPException
+from app.models.reclamo import Reclamo
+
 @router.post("/")
 def registrar_medicion(datos: MedicionPresionCreate, db: Session = Depends(get_db)):
+    if datos.reclamo_id is not None:
+        reclamo = db.query(Reclamo).filter(Reclamo.id == datos.reclamo_id).first()
+        if not reclamo:
+            raise HTTPException(status_code=404, detail="Reclamo no encontrado")
+
     medicion = MedicionPresion(**datos.model_dump())
     db.add(medicion)
     db.commit()

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { crearMedicionPresion, obtenerHistorialPresion } from "../api/presion";
-import type { MedicionPresion } from "../types";
+import { listarReclamos } from "../api/reclamos";
+import type { MedicionPresion, Reclamo } from "../types";
 import Input from "../components/Input";
 import Textarea from "../components/Textarea";
 
@@ -9,6 +10,10 @@ export default function RegistrarPresion() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  const [asociarReclamo, setAsociarReclamo] = useState(false);
+  const [reclamos, setReclamos] = useState<Reclamo[]>([]);
+  const [reclamoId, setReclamoId] = useState<number | "">("");
 
   const [form, setForm] = useState({
     punto_medicion: "",
@@ -31,9 +36,27 @@ export default function RegistrarPresion() {
     }
   };
 
+  const cargarReclamos = async () => {
+    try {
+      const data = await listarReclamos({ estado: "abierto" });
+      setReclamos(data);
+    } catch {
+      // si falla la carga de reclamos no bloqueamos el registro de la medición
+      setReclamos([]);
+    }
+  };
+
   useEffect(() => {
     cargarHistorial();
   }, []);
+
+  useEffect(() => {
+    if (asociarReclamo) {
+      cargarReclamos();
+    } else {
+      setReclamoId("");
+    }
+  }, [asociarReclamo]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -46,6 +69,12 @@ export default function RegistrarPresion() {
     e.preventDefault();
     setError("");
     setSuccess(false);
+
+    if (asociarReclamo && !reclamoId) {
+      setError("Selecciona el reclamo asociado a esta medición");
+      return;
+    }
+
     setCargando(true);
     try {
       const horaActual = new Date().toTimeString().slice(0, 8); // "HH:MM:SS"
@@ -57,6 +86,7 @@ export default function RegistrarPresion() {
         hora_medicion: horaActual,
         presion_mca: Number(form.presion_mca),
         observaciones: form.observaciones || undefined,
+        reclamo_id: asociarReclamo ? Number(reclamoId) : undefined,
       });
 
       setForm({
@@ -66,6 +96,8 @@ export default function RegistrarPresion() {
         presion_mca: "",
         observaciones: "",
       });
+      setAsociarReclamo(false);
+      setReclamoId("");
       setSuccess(true);
       cargarHistorial();
     } catch (err) {
@@ -137,6 +169,50 @@ export default function RegistrarPresion() {
             placeholder="Opcional"
           />
 
+          <div className="border-t border-border pt-4 flex flex-col gap-3">
+            <label className="flex items-center gap-2 text-sm text-text">
+              <input
+                type="checkbox"
+                checked={asociarReclamo}
+                onChange={(e) => setAsociarReclamo(e.target.checked)}
+                className="rounded border-border text-primary focus:ring-primary/40"
+              />
+              Esta medición responde a un reclamo
+            </label>
+
+            {asociarReclamo && (
+              <div className="flex flex-col gap-1">
+                <label
+                  htmlFor="reclamo_id"
+                  className="text-sm font-medium text-text"
+                >
+                  Reclamo asociado
+                </label>
+                <select
+                  id="reclamo_id"
+                  value={reclamoId}
+                  onChange={(e) =>
+                    setReclamoId(e.target.value ? Number(e.target.value) : "")
+                  }
+                  className="px-3 py-2 rounded-lg border border-border bg-surface text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
+                >
+                  <option value="">Selecciona un reclamo...</option>
+                  {reclamos.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.folio} — {r.tipo_reclamo}
+                      {r.nombre_reclamante ? ` — ${r.nombre_reclamante}` : ""}
+                    </option>
+                  ))}
+                </select>
+                {reclamos.length === 0 && (
+                  <p className="text-xs text-muted">
+                    No hay reclamos abiertos en este momento.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           {error && (
             <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {error}
@@ -178,6 +254,7 @@ export default function RegistrarPresion() {
                   <p className="text-sm text-muted">
                     {m.fecha_medicion} {m.hora_medicion ?? ""} — {m.presion_mca}{" "}
                     mca
+                    {m.reclamo_id ? " · Asociada a reclamo" : ""}
                   </p>
                 </div>
                 <span

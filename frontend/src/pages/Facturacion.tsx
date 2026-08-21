@@ -183,7 +183,6 @@ export default function Facturacion() {
             </thead>
             <tbody>
               {facturas.map((f) => {
-                console.log(f.cliente_id, f.tipo_facturacion);
                 const tieneArrastre =
                   f.saldo_anterior > 0 || f.interes_mora > 0;
                 return (

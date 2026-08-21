@@ -1,7 +1,7 @@
 // pages/RegistrarCorte.tsx
 import { useState, useEffect } from "react";
 import { abrirCorte, cerrarCorte, listarCortes } from "../api/continuidad";
-import type { CorteResponse } from "../api/continuidad";
+import type { CorteResponse } from "../types";
 import Input from "../components/Input";
 import Textarea from "../components/Textarea";
 import Select from "../components/Select";

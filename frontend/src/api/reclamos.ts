@@ -1,37 +1,6 @@
-// api/reclamos.ts
-const API_URL = import.meta.env.VITE_API_URL; // ajusta según cómo lo tengas definido
+const API_URL = import.meta.env.VITE_API_URL;
 
-export interface Reclamo {
-  id: number;
-  folio: string;
-  anio: number;
-  cliente_id: number | null;
-  nombre_reclamante: string | null;
-  rut_reclamante: string | null;
-  direccion_reclamo: string | null;
-  tipo_reclamo: string;
-  descripcion: string;
-  fecha_recepcion: string;
-  plazo_vencimiento: string;
-  estado: "abierto" | "respondido" | "cerrado" | "cerrado_sin_respuesta";
-  fecha_respuesta: string | null;
-  respuesta: string | null;
-  dias_habiles_respuesta: number | null;
-  fuera_de_plazo: boolean | null;
-  motivo_cierre: string | null;
-  observaciones: string | null;
-}
-
-export interface ReclamoCreate {
-  cliente_id?: number | null;
-  nombre_reclamante?: string;
-  rut_reclamante?: string;
-  direccion_reclamo?: string;
-  tipo_reclamo: string;
-  descripcion: string;
-  fecha_recepcion?: string;
-  observaciones?: string;
-}
+import type { ReclamoCreate, Reclamo } from "../types";
 
 async function manejarRespuesta(res: Response) {
   if (!res.ok) {

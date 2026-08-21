@@ -10,27 +10,46 @@ import type { Cliente } from "../types";
 type FiltroActivo = "todos" | "activos" | "inactivos";
 type FiltroSocio = "todos" | "socios" | "no_socios";
 
+const LIMIT = 500;
+
 export default function ListarClientes() {
   const navigate = useNavigate();
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filtroActivo, setFiltroActivo] = useState<FiltroActivo>("activos");
   const [filtroSocio, setFiltroSocio] = useState<FiltroSocio>("todos");
   const [busqueda, setBusqueda] = useState("");
+  const [busquedaDebounced, setBusquedaDebounced] = useState("");
+
+  // debounce: espera 300ms sin escribir antes de disparar la búsqueda
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setBusquedaDebounced(busqueda);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [busqueda]);
 
   async function cargarClientes() {
     setLoading(true);
     setError(null);
     try {
-      const filtros: { activo?: boolean; es_socio?: boolean } = {};
+      const filtros: {
+        activo?: boolean;
+        es_socio?: boolean;
+        q?: string;
+        limit?: number;
+      } = { limit: LIMIT };
       if (filtroActivo === "activos") filtros.activo = true;
       if (filtroActivo === "inactivos") filtros.activo = false;
       if (filtroSocio === "socios") filtros.es_socio = true;
       if (filtroSocio === "no_socios") filtros.es_socio = false;
+      if (busquedaDebounced.trim()) filtros.q = busquedaDebounced.trim();
 
       const data = await listarClientes(filtros);
-      setClientes(data);
+      setClientes(data.items);
+      setTotal(data.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado");
     } finally {
@@ -41,7 +60,7 @@ export default function ListarClientes() {
   useEffect(() => {
     cargarClientes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtroActivo, filtroSocio]);
+  }, [filtroActivo, filtroSocio, busquedaDebounced]);
 
   async function handleToggleActivo(cliente: Cliente) {
     try {
@@ -55,15 +74,6 @@ export default function ListarClientes() {
       setError("No se pudo actualizar el estado del cliente");
     }
   }
-
-  const clientesFiltrados = clientes.filter((c) => {
-    const termino = busqueda.trim().toLowerCase();
-    if (!termino) return true;
-    return (
-      c.rut.toLowerCase().includes(termino) ||
-      c.nombre.toLowerCase().includes(termino)
-    );
-  });
 
   return (
     <div>
@@ -119,7 +129,7 @@ export default function ListarClientes() {
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         {loading ? (
           <p className="text-sm text-muted p-6">Cargando clientes...</p>
-        ) : clientesFiltrados.length === 0 ? (
+        ) : clientes.length === 0 ? (
           <p className="text-sm text-muted p-6">
             No hay clientes que coincidan con el filtro.
           </p>
@@ -136,7 +146,7 @@ export default function ListarClientes() {
               </tr>
             </thead>
             <tbody>
-              {clientesFiltrados.map((c) => (
+              {clientes.map((c) => (
                 <tr key={c.id} className="border-t border-border">
                   <td className="px-4 py-2 text-text">{c.nombre}</td>
                   <td className="px-4 py-2 text-muted">{c.rut}</td>
@@ -189,6 +199,12 @@ export default function ListarClientes() {
           </table>
         )}
       </div>
+
+      {!loading && total > 0 && (
+        <p className="text-xs text-muted mt-3">
+          {total} cliente{total !== 1 ? "s" : ""} en total
+        </p>
+      )}
     </div>
   );
 }

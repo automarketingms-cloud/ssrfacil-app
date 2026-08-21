@@ -23,7 +23,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { obtenerResumenDashboard } from "../api/dashboard";
-import type { ResumenDashboard } from "../api/dashboard";
+import type { ResumenDashboard } from "../types";
 
 function periodoActual(): string {
   const hoy = new Date();

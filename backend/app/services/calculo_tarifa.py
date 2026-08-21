@@ -3,6 +3,8 @@ from app.models.lectura import Lectura
 from app.models.tarifa import Tarifa, TarifaTramo
 from app.models.cliente import Cliente
 
+from datetime import date
+
 
 def obtener_lectura_anterior(db: Session, cliente_id: int, periodo_actual: str) -> float:
     """
@@ -138,18 +140,16 @@ def calcular_consumo_por_tramos(consumo_m3: float, tramos: list[TarifaTramo]) ->
     return detalle
 
 
-IVA_PORCENTAJE = 0.19
-
-def calcular_total_a_pagar(consumo_m3: float, tarifa: Tarifa, cliente: Cliente) -> dict:
+def calcular_total_a_pagar(
+    consumo_m3: float, tarifa: Tarifa, cliente: Cliente, tasa_iva: float
+) -> dict:
     """
     Calcula el desglose de cobro: cargo fijo + variable por tramos +
     cargo fondo de reposición y reinversión - subsidio + IVA (si no es socio).
-    El cargo fondo de reposición se calcula como consumo_m3 * valor_fondo_reposicion
-    de la tarifa (precio fijo por m3, NO por tramos).
-    El subsidio (si el cliente lo tiene) se aplica como porcentaje SOLO sobre
-    (cargo_fijo + subtotal del tramo 1) — no afecta el fondo de reposición.
-    El IVA (19%) se aplica sobre el NETO (cargo_fijo + monto_variable +
+    ...
+    El IVA se aplica sobre el NETO (cargo_fijo + monto_variable +
     cargo_fondo_reposicion - subsidio), solo a clientes que no son socios.
+    tasa_iva viene de Configuracion, en porcentaje (ej. 19.0 = 19%).
     """
     detalle_tramos = calcular_consumo_por_tramos(consumo_m3, tarifa.tramos)
     monto_variable = round(sum(t["subtotal"] for t in detalle_tramos), 2)
@@ -171,7 +171,7 @@ def calcular_total_a_pagar(consumo_m3: float, tarifa: Tarifa, cliente: Cliente) 
 
     iva_monto = 0.0
     if not cliente.es_socio:
-        iva_monto = round(subtotal_neto * IVA_PORCENTAJE, 2)
+        iva_monto = round(subtotal_neto * (tasa_iva / 100), 2)
 
     total = subtotal_neto + iva_monto
 
@@ -187,3 +187,38 @@ def calcular_total_a_pagar(consumo_m3: float, tarifa: Tarifa, cliente: Cliente) 
         "total_a_pagar": round(total, 2),
     }
 
+def validar_periodo_no_futuro(periodo: str) -> None:
+    """
+    Rechaza el registro de una lectura para un periodo posterior al
+    mes/año actual. Formato periodo: "YYYY-MM".
+    """
+    periodo_actual = date.today().strftime("%Y-%m")
+    if periodo > periodo_actual:
+        raise ValueError(
+            f"No se puede registrar una lectura para el periodo {periodo}: "
+            f"es posterior al periodo actual ({periodo_actual})"
+        )
+    
+def validar_orden_periodo_facturacion(db: Session, cliente_id: int, periodo: str) -> None:
+    """
+    Impide generar una factura para un periodo si el cliente ya tiene una
+    factura de un periodo MÁS NUEVO. Facturar fuera de orden cronológico
+    corrompe el cálculo de saldo_anterior/interes_mora/aviso de corte,
+    que asume que "anterior" significa "anterior en el tiempo" (ver
+    calcular_saldo_anterior_e_interes y calcular_aviso_corte en
+    services/factura.py).
+    """
+    from app.models.factura import Factura
+
+    factura_mas_nueva = (
+        db.query(Factura)
+        .filter(Factura.cliente_id == cliente_id, Factura.periodo > periodo)
+        .order_by(Factura.periodo.desc())
+        .first()
+    )
+    if factura_mas_nueva:
+        raise ValueError(
+            f"No se puede generar la factura del periodo {periodo}: este cliente ya "
+            f"tiene una factura del periodo {factura_mas_nueva.periodo}, más reciente. "
+            f"Facturar fuera de orden puede generar saldos e intereses incorrectos."
+        )

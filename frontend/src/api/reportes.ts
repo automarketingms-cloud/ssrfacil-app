@@ -1,5 +1,8 @@
-import type { ReporteFacturacionResponse } from "../types";
-import type { CorteResponse } from "./continuidad";
+import type {
+  ReporteFacturacionResponse,
+  ReporteContinuidad,
+  ReporteReclamos,
+} from "../types";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -41,19 +44,6 @@ export function urlDescargaPdfPresion(desde?: string, hasta?: string): string {
   return `${API_URL}/reportes/presion/pdf?${params.toString()}`;
 }
 
-export interface ReporteContinuidad {
-  periodo: string;
-  total_cortes: number;
-  total_activos: number;
-  total_cerrados: number;
-  duracion_promedio_horas: number;
-  duracion_total_horas: number;
-  total_clientes_afectados: number;
-  cortes_por_tipo: Record<string, number>;
-  cortes_activos: CorteResponse[];
-  cortes_cerrados: CorteResponse[];
-}
-
 export async function obtenerReporteContinuidad(
   periodo: string,
 ): Promise<ReporteContinuidad> {
@@ -73,27 +63,6 @@ export function urlReporteContinuidadExcel(periodo: string): string {
 
 export function urlReporteContinuidadPdf(periodo: string): string {
   return `${API_URL}/reportes/continuidad/${periodo}/pdf`;
-}
-
-export interface ReporteReclamos {
-  periodo: string;
-  total_reclamos: number;
-  total_respondidos: number;
-  total_fuera_de_plazo: number;
-  promedio_dias_habiles_respuesta: number | null;
-  reclamos_por_tipo: Record<string, number>;
-  reclamos_por_estado: Record<string, number>;
-  detalle: Array<{
-    folio: string;
-    tipo_reclamo: string;
-    nombre_reclamante: string | null;
-    fecha_recepcion: string;
-    plazo_vencimiento: string;
-    estado: string;
-    fecha_respuesta: string | null;
-    dias_habiles_respuesta: number | null;
-    fuera_de_plazo: boolean | null;
-  }>;
 }
 
 export async function obtenerReporteReclamos(

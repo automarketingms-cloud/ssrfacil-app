@@ -5,8 +5,9 @@ import {
   responderReclamo,
   cerrarReclamo,
   cerrarReclamoSinRespuesta,
-  type Reclamo,
 } from "../api/reclamos";
+
+import type { Reclamo } from "../types";
 
 import Textarea from "../components/Textarea";
 

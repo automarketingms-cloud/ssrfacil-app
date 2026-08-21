@@ -7,6 +7,7 @@ import {
   obtenerConfiguracion,
   actualizarConfiguracion,
 } from "../api/configuracion";
+import { formatearRut, validarRut } from "../utils/rut";
 
 export default function Configuracion() {
   const [form, setForm] = useState<ConfiguracionUpdate>({});
@@ -14,6 +15,7 @@ export default function Configuracion() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState(false);
+  const [rutError, setRutError] = useState<string | null>(null);
 
   useEffect(() => {
     cargarConfiguracion();
@@ -31,9 +33,11 @@ export default function Configuracion() {
         horario_atencion: data.horario_atencion ?? "",
         email: data.email ?? "",
         giro: data.giro ?? "",
+        numero_medidor_matriz: data.numero_medidor_matriz ?? "",
         dias_plazo_pago: data.dias_plazo_pago,
         dia_facturacion: data.dia_facturacion,
         tasa_interes_mora: data.tasa_interes_mora,
+        tasa_iva: data.tasa_iva,
       });
     } catch (err) {
       setError(
@@ -52,10 +56,29 @@ export default function Configuracion() {
     setExito(false);
   }
 
+  function handleRutChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const formateado = formatearRut(e.target.value);
+    handleChange("rut_empresa", formateado);
+
+    if (formateado.length === 0) {
+      setRutError(null);
+    } else if (!validarRut(formateado)) {
+      setRutError("RUT inválido");
+    } else {
+      setRutError(null);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setExito(false);
+
+    if (form.rut_empresa && !validarRut(form.rut_empresa)) {
+      setRutError("RUT inválido");
+      return;
+    }
+
     try {
       setGuardando(true);
       await actualizarConfiguracion(form);
@@ -103,8 +126,13 @@ export default function Configuracion() {
               type="text"
               className="w-full border border-border rounded-md px-3 py-2"
               value={form.rut_empresa ?? ""}
-              onChange={(e) => handleChange("rut_empresa", e.target.value)}
+              onChange={handleRutChange}
+              placeholder="12.345.678-9"
+              maxLength={12}
             />
+            {rutError && (
+              <p className="text-xs text-red-600 mt-1">{rutError}</p>
+            )}
           </div>
 
           <div>
@@ -117,7 +145,7 @@ export default function Configuracion() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-muted mb-1">Teléfono</label>
               <input
@@ -160,6 +188,19 @@ export default function Configuracion() {
               onChange={(e) => handleChange("giro", e.target.value)}
             />
           </div>
+          <div>
+            <label className="block text-sm text-muted mb-1">
+              N° Medidor Matriz
+            </label>
+            <input
+              type="text"
+              className="w-full border border-border rounded-md px-3 py-2"
+              value={form.numero_medidor_matriz ?? ""}
+              onChange={(e) =>
+                handleChange("numero_medidor_matriz", e.target.value)
+              }
+            />
+          </div>
         </section>
 
         <section className="bg-surface border border-border rounded-lg p-6 space-y-4">
@@ -199,12 +240,10 @@ export default function Configuracion() {
             </div>
           </div>
           <section className="bg-surface border border-border rounded-lg p-6 space-y-4">
-            <h2 className="text-sm font-semibold text-text">
-              Interés por mora
-            </h2>
+            <h2 className="text-sm font-semibold text-text">Tasas</h2>
             <div>
               <label className="block text-sm text-muted mb-1">
-                Tasa de interés anual (%)
+                Tasa de interés anual por mora (%)
               </label>
               <input
                 type="number"
@@ -219,6 +258,24 @@ export default function Configuracion() {
               <p className="text-xs text-muted mt-1">
                 Corresponde a la tasa de interés corriente publicada por la CMF
                 (actualízala manualmente cuando cambie).
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm text-muted mb-1">
+                Tasa de IVA (%)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                className="w-full border border-border rounded-md px-3 py-2"
+                value={form.tasa_iva ?? ""}
+                onChange={(e) =>
+                  handleChange("tasa_iva", Number(e.target.value))
+                }
+              />
+              <p className="text-xs text-muted mt-1">
+                Se aplica solo a clientes no socios, sobre el neto a pagar.
               </p>
             </div>
           </section>

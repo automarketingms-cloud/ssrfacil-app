@@ -11,10 +11,18 @@ class LecturaCreate(BaseModel):
 class LecturaResponse(LecturaCreate):
     id: int
     consumo_m3: float | None = None
+    tiene_foto: bool = False
+    facturada: bool = False
 
     class Config:
         from_attributes = True
 
+class LecturaListResponse(BaseModel):
+    items: list[LecturaResponse]
+    total: int
+    page: int
+    limit: int
+    
 class LecturaUpdate(BaseModel):
     fecha_lectura: date | None = None
     periodo: str | None = None

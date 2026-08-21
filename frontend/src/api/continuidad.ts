@@ -1,29 +1,6 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
-export interface CorteCreate {
-  fecha_hora_inicio: string;
-  tipo: "programado" | "no_programado";
-  causa: string;
-  sector_afectado: string;
-  clientes_afectados?: number;
-  observaciones?: string;
-}
-
-export interface CorteCierre {
-  fecha_hora_termino: string;
-}
-
-export interface CorteResponse {
-  id: number;
-  fecha_hora_inicio: string;
-  fecha_hora_termino: string | null;
-  tipo: string;
-  causa: string;
-  sector_afectado: string;
-  clientes_afectados: number | null;
-  observaciones: string | null;
-  duracion_horas: number | null;
-}
+import type { CorteResponse, CorteCierre, CorteCreate } from "../types";
 
 export async function abrirCorte(data: CorteCreate): Promise<CorteResponse> {
   const res = await fetch(`${API_URL}/continuidad/`, {

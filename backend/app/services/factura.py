@@ -1,25 +1,25 @@
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from sqlalchemy.orm import Session
 
 from app.models.factura import Factura
 from app.models.lectura import Lectura
 from app.models.cliente import Cliente
-from app.services.facturacion import (
-    obtener_lectura_anterior,
+from app.services.calculo_tarifa import (
     obtener_tarifa_vigente,
     calcular_consumo,
     calcular_total_a_pagar,
+    validar_orden_periodo_facturacion,
 )
 from app.models.pago import Pago
 
-from app.models.cliente import Cliente
-
 from io import BytesIO
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill
 from app.services.configuracion import obtener_configuracion
 from app.services.pago import calcular_saldo_factura
 
@@ -32,6 +32,8 @@ def generar_factura(db: Session, cliente_id: int, periodo: str) -> Factura:
     )
     if ya_existe:
         raise ValueError("Ya existe una factura para este cliente en este periodo")
+
+    validar_orden_periodo_facturacion(db, cliente_id, periodo)
 
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
     if not cliente:
@@ -63,9 +65,9 @@ def generar_factura(db: Session, cliente_id: int, periodo: str) -> Factura:
 
     consumo_a_facturar, mensaje_ajuste = aplicar_ajuste_credito_m3(cliente, consumo_medido)
 
-    desglose = calcular_total_a_pagar(consumo_a_facturar, tarifa, cliente)
-
     config = obtener_configuracion(db)
+
+    desglose = calcular_total_a_pagar(consumo_a_facturar, tarifa, cliente, config.tasa_iva)
 
     fecha_emision = date.today()
     fecha_vencimiento = fecha_emision + timedelta(days=config.dias_plazo_pago)
@@ -81,9 +83,11 @@ def generar_factura(db: Session, cliente_id: int, periodo: str) -> Factura:
     factura = Factura(
         cliente_id=cliente_id,
         periodo=periodo,
-        tipo_facturacion="termino_medio" if lectura.es_promedio else "normal",
+         tipo_facturacion="termino_medio" if lectura.es_promedio else "normal",
         lectura_anterior=lectura_anterior_valor,
         lectura_actual=lectura.lectura_actual,
+        fecha_lectura_anterior=fecha_lectura_anterior,
+        fecha_lectura_actual=lectura.fecha_lectura,
         consumo_m3=consumo_a_facturar,
         detalle_tramos=desglose["detalle_tramos"],
         valor_fondo_reposicion=tarifa.valor_fondo_reposicion,
@@ -597,6 +601,10 @@ def construir_reporte_facturacion(periodo: str, db: Session) -> dict:
     al emitir), así el reporte siempre coincide exactamente con la boleta
     real que recibió cada cliente. Requiere que las facturas del periodo
     ya hayan sido generadas; lanza ValueError si no hay ninguna.
+
+    Optimizado para evitar consultas N+1: en vez de una query a Cliente,
+    Factura (anterior) y Pago por cada factura del período, se cargan
+    todas de una vez (3 queries grandes) y se cruzan en memoria.
     """
     facturas = db.query(Factura).filter(Factura.periodo == periodo).all()
     if not facturas:
@@ -608,11 +616,44 @@ def construir_reporte_facturacion(periodo: str, db: Session) -> dict:
     tarifa = obtener_tarifa_vigente(db, periodo)
     config = obtener_configuracion(db)
 
+    cliente_ids = [f.cliente_id for f in facturas]
+
+    # --- Carga masiva de clientes ---
+    clientes_por_id = {
+        c.id: c
+        for c in db.query(Cliente).filter(Cliente.id.in_(cliente_ids)).all()
+    }
+
+    # --- Carga masiva de la última factura anterior de cada cliente ---
+    # (para saber desde qué fecha contar los pagos "del período")
+    facturas_previas = (
+        db.query(Factura)
+        .filter(Factura.cliente_id.in_(cliente_ids), Factura.periodo < periodo)
+        .order_by(Factura.cliente_id, Factura.periodo.desc())
+        .all()
+    )
+    factura_anterior_por_cliente: dict[int, Factura] = {}
+    for f in facturas_previas:
+        # como viene ordenado por periodo desc, la primera que aparece
+        # por cliente_id es la más reciente
+        factura_anterior_por_cliente.setdefault(f.cliente_id, f)
+
+    # --- Carga masiva de todos los pagos relevantes ---
+    pagos_rows = (
+        db.query(Pago, Factura.cliente_id)
+        .join(Factura, Pago.factura_id == Factura.id)
+        .filter(Factura.cliente_id.in_(cliente_ids))
+        .all()
+    )
+    pagos_por_cliente: dict[int, list[Pago]] = {}
+    for pago, cid in pagos_rows:
+        pagos_por_cliente.setdefault(cid, []).append(pago)
+
     detalle = []
     total_recaudado = 0.0
 
     for factura in facturas:
-        cliente = db.query(Cliente).filter(Cliente.id == factura.cliente_id).first()
+        cliente = clientes_por_id.get(factura.cliente_id)
         if not cliente:
             continue
 
@@ -625,21 +666,14 @@ def construir_reporte_facturacion(periodo: str, db: Session) -> dict:
             and date.today() >= factura.fecha_limite_corte
         )
 
-        factura_anterior = (
-            db.query(Factura)
-            .filter(Factura.cliente_id == factura.cliente_id, Factura.periodo < factura.periodo)
-            .order_by(Factura.periodo.desc())
-            .first()
-        )
+        factura_anterior = factura_anterior_por_cliente.get(factura.cliente_id)
         fecha_desde_pagos = factura_anterior.fecha_emision if factura_anterior else date.min
 
-        pagos_del_periodo = (
-            db.query(Pago)
-            .join(Factura, Pago.factura_id == Factura.id)
-            .filter(Factura.cliente_id == factura.cliente_id)
-            .filter(Pago.fecha_pago > fecha_desde_pagos, Pago.fecha_pago <= factura.fecha_emision)
-            .all()
-        )
+        pagos_cliente = pagos_por_cliente.get(factura.cliente_id, [])
+        pagos_del_periodo = [
+            p for p in pagos_cliente
+            if fecha_desde_pagos < p.fecha_pago <= factura.fecha_emision
+        ]
         monto_pagado_periodo = round(sum(p.monto for p in pagos_del_periodo), 2)
         fecha_ultimo_pago = max((p.fecha_pago for p in pagos_del_periodo), default=None)
 
@@ -693,3 +727,143 @@ def construir_reporte_facturacion(periodo: str, db: Session) -> dict:
         "horario_atencion": config.horario_atencion,
         "detalle": detalle,
     }
+
+def construir_excel_reporte_facturacion(periodo: str, db: Session) -> BytesIO:
+    """
+    Genera el Excel del reporte de facturación con respaldo (fiscalización SISS).
+    """
+    reporte = construir_reporte_facturacion(periodo, db)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"Facturacion {periodo}"
+
+    ws["A1"] = "Reporte de Facturación con Respaldo"
+    ws["A1"].font = Font(size=14, bold=True)
+    ws["A2"] = f"Periodo: {reporte['periodo']}"
+    ws["A3"] = f"Tarifa vigente: {reporte['tarifa_vigente']}"
+    ws["A4"] = f"Clientes facturados: {reporte['cantidad_clientes_facturados']}"
+    ws["A5"] = f"Total recaudado: ${reporte['total_recaudado']:,.0f}"
+    ws["A6"] = f"Teléfono de atención: {reporte['telefono_atencion'] or '—'}"
+    ws["A7"] = f"Horario de atención: {reporte['horario_atencion'] or '—'}"
+    ws["A8"] = f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}"
+
+    headers = [
+        "RUT", "Nombre", "Dirección", "N° Medidor", "Socio", "Subsidio",
+        "Tipo Facturación", "Fecha Lect. Anterior", "Fecha Lect. Actual",
+        "Lectura Anterior", "Lectura Actual", "Consumo m3",
+        "Tarifa", "Cargo Fijo", "Monto Variable", "Subtotal",
+        "M3 Subsidiados", "% Subsidio", "Subsidio Aplicado",
+        "Subtotal Neto", "IVA Aplicado", "Saldo Anterior", "Interés Mora",
+        "Total a Pagar", "Vencimiento", "Monto Pagado (periodo)",
+        "Fecha Último Pago"
+    ]
+    header_row = 10
+    for col, h in enumerate(headers, start=1):
+        cell = ws.cell(row=header_row, column=col, value=h)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center")
+
+    row = header_row + 1
+    for r in reporte["detalle"]:
+        ws.cell(row=row, column=1, value=r["rut"])
+        ws.cell(row=row, column=2, value=r["nombre_cliente"])
+        ws.cell(row=row, column=3, value=r["direccion"])
+        ws.cell(row=row, column=4, value=r["numero_medidor"])
+        ws.cell(row=row, column=5, value="Sí" if r["es_socio"] else "No")
+        ws.cell(row=row, column=6, value="Sí" if r["tiene_subsidio"] else "No")
+        ws.cell(row=row, column=7, value=r["tipo_facturacion"])
+        ws.cell(row=row, column=8, value=str(r["fecha_lectura_anterior"]) if r.get("fecha_lectura_anterior") else "—")
+        ws.cell(row=row, column=9, value=str(r["fecha_lectura_actual"]) if r.get("fecha_lectura_actual") else "—")
+        ws.cell(row=row, column=10, value=r["lectura_anterior"])
+        ws.cell(row=row, column=11, value=r["lectura_actual"])
+        ws.cell(row=row, column=12, value=r["consumo_m3"])
+        ws.cell(row=row, column=13, value=r["tarifa_aplicada"])
+        ws.cell(row=row, column=14, value=r.get("cargo_fijo"))
+        ws.cell(row=row, column=15, value=r.get("monto_variable"))
+        ws.cell(row=row, column=16, value=r.get("subtotal"))
+        ws.cell(row=row, column=17, value=r.get("m3_subsidiados") or "—")
+        ws.cell(row=row, column=18, value=r.get("porcentaje_subsidio_aplicado") or "—")
+        ws.cell(row=row, column=19, value=f"-{r['subsidio_aplicado']:,.0f}" if r.get("subsidio_aplicado") else "—")
+        ws.cell(row=row, column=20, value=r.get("subtotal_neto"))
+        ws.cell(row=row, column=21, value=r.get("iva_aplicado"))
+        ws.cell(row=row, column=22, value=r.get("saldo_anterior") or 0)
+        ws.cell(row=row, column=23, value=r.get("interes_mora") or 0)
+        ws.cell(row=row, column=24, value=r["total_a_pagar"])
+        ws.cell(
+            row=row, column=25,
+            value="Corte en Trámite" if r["corte_en_tramite"]
+            else (str(r["fecha_vencimiento"]) if r["fecha_vencimiento"] else "—")
+        )
+        ws.cell(row=row, column=26, value=r.get("monto_pagado_periodo") or 0)
+        ws.cell(row=row, column=27, value=str(r["fecha_ultimo_pago"]) if r.get("fecha_ultimo_pago") else "—")
+        row += 1
+
+    for col_cells in ws.columns:
+        length = max(len(str(c.value)) if c.value else 0 for c in col_cells)
+        ws.column_dimensions[col_cells[0].column_letter].width = min(length + 3, 30)
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def construir_pdf_reporte_facturacion(periodo: str, db: Session) -> BytesIO:
+    """
+    Genera el PDF del reporte de facturación con respaldo (fiscalización SISS).
+    """
+    reporte = construir_reporte_facturacion(periodo, db)
+    styles = getSampleStyleSheet()
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=1.5 * cm, bottomMargin=1.5 * cm)
+    elementos = []
+
+    elementos.append(Paragraph("Reporte de Facturación con Respaldo", styles["Title"]))
+    elementos.append(Paragraph(f"Periodo: {reporte['periodo']} | Tarifa vigente: {reporte['tarifa_vigente']}", styles["Normal"]))
+    elementos.append(Paragraph(
+        f"Clientes facturados: {reporte['cantidad_clientes_facturados']} | "
+        f"Total recaudado: ${reporte['total_recaudado']:,.0f}", styles["Normal"]
+    ))
+    elementos.append(Paragraph(
+        f"Teléfono: {reporte['telefono_atencion'] or '—'} | Horario: {reporte['horario_atencion'] or '—'}",
+        styles["Normal"]
+    ))
+    elementos.append(Paragraph(f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
+    elementos.append(Spacer(1, 0.5 * cm))
+
+    data = [["RUT", "Nombre", "N° Medidor", "Consumo m3", "Subtotal", "Subsidio", "Saldo Anterior", "Total a Pagar", "Vencimiento"]]
+    for r in reporte["detalle"]:
+        vencimiento = (
+            "Corte en Trámite" if r["corte_en_tramite"]
+            else (str(r["fecha_vencimiento"]) if r["fecha_vencimiento"] else "—")
+        )
+        data.append([
+            r["rut"],
+            r["nombre_cliente"],
+            r["numero_medidor"],
+            r["consumo_m3"],
+            f"${r.get('subtotal', 0):,.0f}",
+            f"-${r['subsidio_aplicado']:,.0f}" if r.get("subsidio_aplicado") else "—",
+            f"${r['saldo_anterior']:,.0f}" if r.get("saldo_anterior") else "—",
+            f"${r['total_a_pagar']:,.0f}",
+            vencimiento,
+        ])
+
+    tabla = Table(data, repeatRows=1)
+    tabla.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4472C4")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F2F2F2")]),
+        ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
+    ]))
+    elementos.append(tabla)
+
+    doc.build(elementos)
+    buffer.seek(0)
+    return buffer

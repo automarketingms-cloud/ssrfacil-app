@@ -11,12 +11,11 @@ export interface Cliente {
   porcentaje_subsidio: number;
 }
 
-export interface LecturaInput {
-  cliente_id: number;
-  fecha_lectura: string; // "2026-07-23"
-  periodo: string; // "2026-07"
-  lectura_actual: number;
-  es_promedio?: boolean;
+export interface ClienteListResponse {
+  items: Cliente[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export interface Lectura {
@@ -25,8 +24,17 @@ export interface Lectura {
   fecha_lectura: string;
   periodo: string;
   lectura_actual: number;
-  es_promedio: boolean;
   consumo_m3: number | null;
+  tiene_foto: boolean;
+  facturada: boolean;
+  es_promedio: boolean;
+}
+
+export interface LecturaListResponse {
+  items: Lectura[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export interface LecturaUpdate {
@@ -132,6 +140,7 @@ export interface MedicionPresionCreate {
   hora_medicion?: string;
   presion_mca: number;
   observaciones?: string;
+  reclamo_id?: number | null;
 }
 
 export interface MedicionPresion {
@@ -145,6 +154,7 @@ export interface MedicionPresion {
   rango_minimo: number;
   rango_maximo: number;
   cumple: boolean;
+  reclamo_id: number | null;
 }
 
 export interface Factura {
@@ -240,6 +250,8 @@ export interface Configuracion {
   dias_plazo_pago: number;
   dia_facturacion: number;
   tasa_interes_mora: number;
+  tasa_iva: number;
+  numero_medidor_matriz: string;
 }
 
 export interface ConfiguracionUpdate {
@@ -253,4 +265,176 @@ export interface ConfiguracionUpdate {
   dias_plazo_pago?: number;
   dia_facturacion?: number;
   tasa_interes_mora?: number;
+  tasa_iva?: number;
+  numero_medidor_matriz?: string;
+}
+
+export interface LecturaMatriz {
+  id: number;
+  periodo: string;
+  fecha_lectura: string;
+  lectura_actual: number;
+  consumo_m3: number;
+  observaciones?: string;
+  tiene_foto: boolean;
+}
+
+export interface LecturaMatrizUpdate {
+  lectura_actual?: number;
+  fecha_lectura?: string;
+  observaciones?: string;
+}
+
+export interface ComparativaAgua {
+  periodo: string;
+  consumo_matriz_m3: number;
+  consumo_clientes_m3: number;
+  agua_no_facturada_m3: number;
+  porcentaje_perdida: number;
+  tiene_lectura_matriz: boolean;
+}
+
+export interface ComparativaAguaResumen {
+  consumo_matriz_m3: number;
+  consumo_clientes_m3: number;
+  agua_no_facturada_m3: number;
+  porcentaje_perdida: number;
+  tiene_datos: boolean;
+}
+
+export interface ComparativaAnual extends ComparativaAguaResumen {
+  anio: string;
+}
+
+export interface CorteCreate {
+  fecha_hora_inicio: string;
+  tipo: "programado" | "no_programado";
+  causa: string;
+  sector_afectado: string;
+  clientes_afectados?: number;
+  observaciones?: string;
+}
+
+export interface CorteCierre {
+  fecha_hora_termino: string;
+}
+
+export interface CorteResponse {
+  id: number;
+  fecha_hora_inicio: string;
+  fecha_hora_termino: string | null;
+  tipo: string;
+  causa: string;
+  sector_afectado: string;
+  clientes_afectados: number | null;
+  observaciones: string | null;
+  duracion_horas: number | null;
+}
+
+export interface FacturacionMes {
+  periodo: string;
+  facturado: number;
+  cobrado: number;
+}
+
+export interface ResumenDashboard {
+  periodo: string;
+  clientes_activos: number;
+  socios_activos: number;
+  clientes_con_subsidio: number;
+  facturacion_total_mes: number;
+  consumo_total_m3: number;
+  lecturas_realizadas: number;
+  medidores_sin_lectura: number;
+  reclamos_abiertos: number;
+  reclamos_fuera_de_plazo: number;
+  cortes_activos: number;
+  monto_pendiente_cobro: number;
+  clientes_morosos: number;
+  facturacion_ultimos_6_meses: FacturacionMes[];
+}
+
+export interface Reclamo {
+  id: number;
+  folio: string;
+  anio: number;
+  cliente_id: number | null;
+  nombre_reclamante: string | null;
+  rut_reclamante: string | null;
+  direccion_reclamo: string | null;
+  tipo_reclamo: string;
+  descripcion: string;
+  fecha_recepcion: string;
+  plazo_vencimiento: string;
+  estado: "abierto" | "respondido" | "cerrado" | "cerrado_sin_respuesta";
+  fecha_respuesta: string | null;
+  respuesta: string | null;
+  dias_habiles_respuesta: number | null;
+  fuera_de_plazo: boolean | null;
+  motivo_cierre: string | null;
+  observaciones: string | null;
+}
+
+export interface ReclamoCreate {
+  cliente_id?: number | null;
+  nombre_reclamante?: string;
+  rut_reclamante?: string;
+  direccion_reclamo?: string;
+  tipo_reclamo: string;
+  descripcion: string;
+  fecha_recepcion?: string;
+  observaciones?: string;
+}
+
+export interface ReporteContinuidad {
+  periodo: string;
+  total_cortes: number;
+  total_activos: number;
+  total_cerrados: number;
+  duracion_promedio_horas: number;
+  duracion_total_horas: number;
+  total_clientes_afectados: number;
+  cortes_por_tipo: Record<string, number>;
+  cortes_activos: CorteResponse[];
+  cortes_cerrados: CorteResponse[];
+}
+
+export interface DetalleReclamoReporte {
+  folio: string;
+  tipo_reclamo: string;
+  nombre_reclamante: string | null;
+  fecha_recepcion: string;
+  plazo_vencimiento: string;
+  estado: string;
+  fecha_respuesta: string | null;
+  dias_habiles_respuesta: number | null;
+  fuera_de_plazo: boolean | null;
+}
+
+export interface ReporteReclamos {
+  periodo: string;
+  total_reclamos: number;
+  total_respondidos: number;
+  total_fuera_de_plazo: number;
+  promedio_dias_habiles_respuesta: number | null;
+  reclamos_por_tipo: Record<string, number>;
+  reclamos_por_estado: Record<string, number>;
+  detalle: DetalleReclamoReporte[];
+}
+
+export type EstadoLectura = "pendiente" | "leido";
+
+export interface ClientePendiente {
+  cliente_id: number;
+  nombre: string;
+  numero_medidor: string;
+  direccion: string;
+  estado: EstadoLectura;
+}
+
+export interface RutaLectura {
+  periodo: string;
+  total_pendientes: number;
+  total_leidos: number;
+  clientes: ClientePendiente[];
 }

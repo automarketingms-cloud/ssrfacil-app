@@ -4,7 +4,7 @@ import {
   urlReporteContinuidadExcel,
   urlReporteContinuidadPdf,
 } from "../api/reportes";
-import type { ReporteContinuidad as ReporteContinuidadType } from "../api/reportes";
+import type { ReporteContinuidad as ReporteContinuidadType } from "../types";
 
 const mesActual = new Date().toISOString().slice(0, 7); // "2026-07"
 

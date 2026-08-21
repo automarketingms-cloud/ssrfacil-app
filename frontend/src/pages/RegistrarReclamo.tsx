@@ -40,13 +40,12 @@ export default function RegistrarReclamo() {
       setClientes([]);
       return;
     }
-    const resultado = await listarClientes({ activo: true });
-    const filtrados = resultado.filter(
-      (c) =>
-        c.nombre.toLowerCase().includes(texto.toLowerCase()) ||
-        c.rut.toLowerCase().includes(texto.toLowerCase()),
-    );
-    setClientes(filtrados);
+    const resultado = await listarClientes({
+      activo: true,
+      q: texto,
+      limit: 20,
+    });
+    setClientes(resultado.items);
   }
 
   async function handleSubmit(e: React.FormEvent) {

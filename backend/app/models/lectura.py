@@ -11,5 +11,6 @@ class Lectura(Base):
     periodo = Column(String, nullable=False)  # formato "2026-07" (año-mes)
     lectura_actual = Column(Float, nullable=False)
     es_promedio = Column(Boolean, nullable=False, default=False)
+    foto_ruta = Column(String, nullable=True)
 
     cliente = relationship("Cliente", backref="lecturas")

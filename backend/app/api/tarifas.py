@@ -7,7 +7,7 @@ from app.models.lectura import Lectura
 from app.schemas.tarifa import TarifaCreate, TarifaResponse
 
 from datetime import date
-from app.services.facturacion import obtener_tarifa_vigente
+from app.services.calculo_tarifa import obtener_tarifa_vigente
 
 router = APIRouter(prefix="/tarifas", tags=["Tarifas"])
 

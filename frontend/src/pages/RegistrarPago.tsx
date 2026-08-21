@@ -56,8 +56,8 @@ export default function RegistrarPago() {
       setClientes([]);
       return;
     }
-    const data = await listarClientes({ activo: true });
-    const filtrados = data.filter(
+    const data = await listarClientes({ activo: true, limit: 1000 });
+    const filtrados = data.items.filter(
       (c) =>
         c.nombre.toLowerCase().includes(valor.toLowerCase()) ||
         c.rut.toLowerCase().includes(valor.toLowerCase()),

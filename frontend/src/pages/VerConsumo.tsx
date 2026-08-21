@@ -18,8 +18,8 @@ export default function VerConsumo() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listarClientes()
-      .then(setClientes)
+    listarClientes({ limit: 1000 })
+      .then((data) => setClientes(data.items))
       .catch(() => setError("No se pudo cargar la lista de clientes"))
       .finally(() => setLoadingClientes(false));
   }, []);

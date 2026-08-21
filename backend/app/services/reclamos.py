@@ -7,6 +7,15 @@ from app.models.reclamo import Reclamo
 from app.models.cliente import Cliente 
 from app.schemas.reclamo import ReclamoCreate, ReclamoResponder
 
+from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import landscape, letter
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+
 DIAS_HABILES_PLAZO = 10
 feriados_chile = holidays.CL()
 
@@ -204,3 +213,102 @@ def construir_reporte_reclamos(db: Session, periodo: str) -> dict:
         "reclamos_por_estado": por_estado,
         "detalle": detalle,
     }
+
+def construir_excel_reporte_reclamos(periodo: str, db: Session) -> BytesIO:
+    reporte = construir_reporte_reclamos(db, periodo)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"Reclamos {periodo}"
+
+    ws["A1"] = "Libro de Reclamos"
+    ws["A1"].font = Font(size=14, bold=True)
+    ws["A2"] = f"Periodo: {reporte['periodo']}"
+    ws["A3"] = f"Total reclamos: {reporte['total_reclamos']} (Respondidos: {reporte['total_respondidos']})"
+    ws["A4"] = f"Fuera de plazo: {reporte['total_fuera_de_plazo']}"
+    ws["A5"] = f"Promedio días hábiles de respuesta: {reporte['promedio_dias_habiles_respuesta'] if reporte['promedio_dias_habiles_respuesta'] is not None else '—'}"
+    ws["A6"] = f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}"
+
+    headers = [
+        "Folio", "Tipo", "Reclamante", "Fecha Recepción", "Plazo Vencimiento",
+        "Estado", "Fecha Respuesta", "Días Hábiles Respuesta", "Fuera de Plazo"
+    ]
+    header_row = 8
+    for col, h in enumerate(headers, start=1):
+        cell = ws.cell(row=header_row, column=col, value=h)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center")
+
+    row = header_row + 1
+    for r in reporte["detalle"]:
+        ws.cell(row=row, column=1, value=r["folio"])
+        ws.cell(row=row, column=2, value=r["tipo_reclamo"])
+        ws.cell(row=row, column=3, value=r["nombre_reclamante"] or "—")
+        ws.cell(row=row, column=4, value=r["fecha_recepcion"])
+        ws.cell(row=row, column=5, value=r["plazo_vencimiento"])
+        ws.cell(row=row, column=6, value=r["estado"])
+        ws.cell(row=row, column=7, value=r["fecha_respuesta"] or "—")
+        ws.cell(row=row, column=8, value=r["dias_habiles_respuesta"] if r["dias_habiles_respuesta"] is not None else "—")
+        ws.cell(row=row, column=9, value="Sí" if r["fuera_de_plazo"] else ("No" if r["fuera_de_plazo"] is not None else "—"))
+        row += 1
+
+    for col_cells in ws.columns:
+        length = max(len(str(c.value)) if c.value else 0 for c in col_cells)
+        ws.column_dimensions[col_cells[0].column_letter].width = min(length + 3, 30)
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def construir_pdf_reporte_reclamos(periodo: str, db: Session) -> BytesIO:
+    reporte = construir_reporte_reclamos(db, periodo)
+    styles = getSampleStyleSheet()
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=1.5 * cm, bottomMargin=1.5 * cm)
+    elementos = []
+
+    elementos.append(Paragraph("Libro de Reclamos", styles["Title"]))
+    elementos.append(Paragraph(f"Periodo: {reporte['periodo']}", styles["Normal"]))
+    elementos.append(Paragraph(
+        f"Total reclamos: {reporte['total_reclamos']} (Respondidos: {reporte['total_respondidos']}) | "
+        f"Fuera de plazo: {reporte['total_fuera_de_plazo']}", styles["Normal"]
+    ))
+    promedio = reporte["promedio_dias_habiles_respuesta"]
+    elementos.append(Paragraph(
+        f"Promedio días hábiles de respuesta: {promedio if promedio is not None else '—'}", styles["Normal"]
+    ))
+    elementos.append(Paragraph(f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
+    elementos.append(Spacer(1, 0.5 * cm))
+
+    data = [["Folio", "Tipo", "Reclamante", "F. Recepción", "Plazo", "Estado", "Días Hábiles", "Fuera Plazo"]]
+    for r in reporte["detalle"]:
+        data.append([
+            r["folio"],
+            r["tipo_reclamo"],
+            r["nombre_reclamante"] or "—",
+            r["fecha_recepcion"],
+            r["plazo_vencimiento"],
+            r["estado"],
+            r["dias_habiles_respuesta"] if r["dias_habiles_respuesta"] is not None else "—",
+            "Sí" if r["fuera_de_plazo"] else ("No" if r["fuera_de_plazo"] is not None else "—"),
+        ])
+
+    tabla = Table(data, repeatRows=1)
+    tabla.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4472C4")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F2F2F2")]),
+        ("ALIGN", (6, 1), (-1, -1), "CENTER"),
+    ]))
+    elementos.append(tabla)
+
+    doc.build(elementos)
+    buffer.seek(0)
+    return buffer
