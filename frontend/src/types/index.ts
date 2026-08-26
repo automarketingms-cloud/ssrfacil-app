@@ -438,3 +438,53 @@ export interface RutaLectura {
   total_leidos: number;
   clientes: ClientePendiente[];
 }
+
+export type Rol = "super_admin" | "admin" | "oficina" | "terreno";
+
+export interface Usuario {
+  id: number;
+  nombre: string;
+  email: string;
+  rol: Rol;
+  empresa_id: number | null;
+  activo: boolean;
+  fecha_creacion: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  usuario: Usuario;
+}
+
+export interface UsuarioCreateData {
+  nombre: string;
+  email: string;
+  password: string;
+  rol: Rol;
+  empresa_id?: number | null; // solo lo usa super_admin
+}
+
+export interface UsuarioUpdateData {
+  nombre?: string;
+  email?: string;
+  rol?: Rol;
+  activo?: boolean;
+  password?: string;
+}
+
+export interface Empresa {
+  id: number;
+  nombre: string;
+  rut: string | null;
+  activa: boolean;
+  fecha_creacion: string;
+}
+
+export interface EmpresaCreateData {
+  nombre: string;
+  rut?: string;
+  admin_nombre: string;
+  admin_email: string;
+  admin_password: string;
+}

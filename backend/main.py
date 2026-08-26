@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from app.core.database import engine, Base
-from app.api import clientes, lecturas, tarifas, consumos, reportes,presion, continuidad, reclamos, dashboard,pago, configuracion, lectura_matriz, facturas
+from app.api import (
+    clientes, lecturas, tarifas, consumos, reportes, presion,
+    continuidad, reclamos, dashboard, pago, configuracion,
+    lectura_matriz, facturas, empresas, auth, usuarios,
+)
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,6 +21,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
+app.include_router(usuarios.router)
+app.include_router(empresas.router)
 app.include_router(clientes.router)
 app.include_router(lecturas.router)
 app.include_router(tarifas.router)

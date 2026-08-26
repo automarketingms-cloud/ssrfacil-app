@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Home,
   Users,
@@ -18,7 +18,11 @@ import {
   Settings,
   TrendingDown,
   ChevronDown,
+  UserCog,
+  LogOut,
+  Building2,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const navSueltos = [
   { to: "/", label: "Inicio", icon: Home },
@@ -79,6 +83,15 @@ const navGrupos = [
   },
 ];
 
+const ROLES_ADMIN = ["admin", "super_admin"];
+
+const ROL_LABELS: Record<string, string> = {
+  super_admin: "Super Admin",
+  admin: "Administrador",
+  oficina: "Oficina",
+  terreno: "Terreno",
+};
+
 function linkClass({ isActive }: { isActive: boolean }) {
   return `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
     isActive
@@ -89,6 +102,8 @@ function linkClass({ isActive }: { isActive: boolean }) {
 
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { usuario, logout } = useAuth();
 
   const [gruposAbiertos, setGruposAbiertos] = useState<Set<string>>(() => {
     const grupoActivo = navGrupos.find((g) =>
@@ -108,6 +123,14 @@ export default function Layout() {
       return next;
     });
   }
+
+  function handleLogout() {
+    logout();
+    navigate("/login");
+  }
+
+  const esAdmin = usuario ? ROLES_ADMIN.includes(usuario.rol) : false;
+  const esSuperAdmin = usuario?.rol === "super_admin";
 
   return (
     <div className="min-h-screen flex">
@@ -130,6 +153,20 @@ export default function Layout() {
               </NavLink>
             );
           })}
+
+          {esAdmin && (
+            <NavLink to="/usuarios" className={linkClass}>
+              <UserCog size={18} />
+              Usuarios
+            </NavLink>
+          )}
+
+          {esSuperAdmin && (
+            <NavLink to="/empresas/nueva" className={linkClass}>
+              <Building2 size={18} />
+              Crear Empresa
+            </NavLink>
+          )}
 
           <div className="h-px bg-navy-light my-2" />
 
@@ -176,19 +213,44 @@ export default function Layout() {
           })}
         </nav>
 
-        <NavLink
-          to="/configuracion"
-          className={({ isActive }) =>
-            `shrink-0 flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              isActive
-                ? "bg-primary text-white"
-                : "text-slate-300 hover:bg-navy-light hover:text-white"
-            }`
-          }
-        >
-          <Settings size={18} />
-          Configuración
-        </NavLink>
+        {esAdmin && (
+          <NavLink
+            to="/configuracion"
+            className={({ isActive }) =>
+              `shrink-0 flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-primary text-white"
+                  : "text-slate-300 hover:bg-navy-light hover:text-white"
+              }`
+            }
+          >
+            <Settings size={18} />
+            Configuración
+          </NavLink>
+        )}
+
+        {usuario && (
+          <div className="shrink-0 border-t border-navy-light pt-3 mt-1">
+            <NavLink
+              to="/perfil"
+              className="px-4 py-1 block hover:bg-navy-light rounded-lg transition-colors"
+            >
+              <p className="text-sm font-medium text-white truncate">
+                {usuario.nombre}
+              </p>
+              <p className="text-xs text-slate-400">
+                {ROL_LABELS[usuario.rol] ?? usuario.rol}
+              </p>
+            </NavLink>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-navy-light hover:text-white transition-colors"
+            >
+              <LogOut size={18} />
+              Cerrar sesión
+            </button>
+          </div>
+        )}
       </aside>
       <main className="flex-1 p-8 bg-bg">
         <Outlet />

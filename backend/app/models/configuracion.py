@@ -1,10 +1,14 @@
-from sqlalchemy import Column, Integer, String, Float
-from app.core.database import Base  
+# app/models/configuracion.py
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy.orm import relationship
+from app.core.database import Base
+
 
 class Configuracion(Base):
     __tablename__ = "configuracion"
 
-    id = Column(Integer, primary_key=True, default=1)
+    id = Column(Integer, primary_key=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False, index=True)
 
     # Datos de la empresa/APR
     nombre_empresa = Column(String, nullable=True)
@@ -25,3 +29,5 @@ class Configuracion(Base):
     tasa_iva = Column(Float, nullable=False, default=19.0)
 
     numero_medidor_matriz = Column(String, nullable=True)
+
+    empresa = relationship("Empresa")
