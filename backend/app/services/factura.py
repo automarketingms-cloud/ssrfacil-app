@@ -24,7 +24,7 @@ from app.services.configuracion import obtener_configuracion
 from app.services.pago import calcular_saldo_factura
 
 
-def generar_factura(db: Session, cliente_id: int, periodo: str) -> Factura:
+def generar_factura(db: Session, cliente_id: int, periodo: str, empresa_id: int) -> Factura:
     ya_existe = (
         db.query(Factura)
         .filter(Factura.cliente_id == cliente_id, Factura.periodo == periodo)
@@ -33,9 +33,17 @@ def generar_factura(db: Session, cliente_id: int, periodo: str) -> Factura:
     if ya_existe:
         raise ValueError("Ya existe una factura para este cliente en este periodo")
 
+    periodo_actual = date.today().strftime("%Y-%m")
+    if periodo > periodo_actual:
+        raise ValueError(f"No se puede facturar el periodo {periodo}: es un periodo futuro")
+
     validar_orden_periodo_facturacion(db, cliente_id, periodo)
 
-    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    cliente = (
+        db.query(Cliente)
+        .filter(Cliente.id == cliente_id, Cliente.empresa_id == empresa_id)
+        .first()
+    )
     if not cliente:
         raise ValueError("Cliente no encontrado")
 
@@ -56,7 +64,7 @@ def generar_factura(db: Session, cliente_id: int, periodo: str) -> Factura:
     lectura_anterior_valor = lectura_anterior_obj.lectura_actual if lectura_anterior_obj else 0.0
     fecha_lectura_anterior = lectura_anterior_obj.fecha_lectura if lectura_anterior_obj else None
 
-    tarifa = obtener_tarifa_vigente(db, periodo)
+    tarifa = obtener_tarifa_vigente(db, periodo, empresa_id)
 
     viene_de_termino_medio = bool(lectura_anterior_obj and lectura_anterior_obj.es_promedio)
     consumo_medido = calcular_consumo(
@@ -65,7 +73,7 @@ def generar_factura(db: Session, cliente_id: int, periodo: str) -> Factura:
 
     consumo_a_facturar, mensaje_ajuste = aplicar_ajuste_credito_m3(cliente, consumo_medido)
 
-    config = obtener_configuracion(db)
+    config = obtener_configuracion(db, empresa_id)
 
     desglose = calcular_total_a_pagar(consumo_a_facturar, tarifa, cliente, config.tasa_iva)
 
@@ -81,9 +89,10 @@ def generar_factura(db: Session, cliente_id: int, periodo: str) -> Factura:
     mensaje_boleta = mensaje_ajuste or mensaje_boleta_corte
 
     factura = Factura(
+        empresa_id=empresa_id,
         cliente_id=cliente_id,
         periodo=periodo,
-         tipo_facturacion="termino_medio" if lectura.es_promedio else "normal",
+        tipo_facturacion="termino_medio" if lectura.es_promedio else "normal",
         lectura_anterior=lectura_anterior_valor,
         lectura_actual=lectura.lectura_actual,
         fecha_lectura_anterior=fecha_lectura_anterior,
@@ -225,15 +234,8 @@ def aplicar_ajuste_credito_m3(cliente: Cliente, consumo_medido: float) -> tuple[
     return consumo_medido, mensaje
 
 
-def generar_facturas_periodo(db: Session, periodo: str) -> dict:
-    """
-    Genera facturas para todos los clientes con lectura registrada en el
-    periodo que aún no tengan factura emitida. Bloquea el lote completo
-    si aún no llega el día de facturación del mes. Si falla un cliente
-    puntual (ej. sin tarifa vigente), no detiene el resto del lote: se
-    registra en 'fallidas' y se sigue con los demás.
-    """
-    config = obtener_configuracion(db)
+def generar_facturas_periodo(db: Session, periodo: str, empresa_id: int) -> dict:
+    config = obtener_configuracion(db, empresa_id)
 
     periodo_actual = date.today().strftime("%Y-%m")
     es_periodo_actual = periodo == periodo_actual
@@ -243,7 +245,12 @@ def generar_facturas_periodo(db: Session, periodo: str) -> dict:
             f"Aún no se puede facturar el período actual: la emisión habilita desde el día {config.dia_facturacion} del mes"
         )
 
-    lecturas = db.query(Lectura).filter(Lectura.periodo == periodo).all()
+    lecturas = (
+        db.query(Lectura)
+        .join(Cliente, Lectura.cliente_id == Cliente.id)
+        .filter(Lectura.periodo == periodo, Cliente.empresa_id == empresa_id)
+        .all()
+    )
     generadas = []
     fallidas = []
 
@@ -260,7 +267,7 @@ def generar_facturas_periodo(db: Session, periodo: str) -> dict:
             continue
 
         try:
-            factura = generar_factura(db, lectura.cliente_id, periodo)
+            factura = generar_factura(db, lectura.cliente_id, periodo, empresa_id)
             generadas.append(factura)
         except ValueError as e:
             fallidas.append({"cliente_id": lectura.cliente_id, "motivo": str(e)})
@@ -274,11 +281,12 @@ def generar_facturas_periodo(db: Session, periodo: str) -> dict:
     }
 
 
-def obtener_factura(db: Session, factura_id: int) -> Factura:
-    """
-    Busca una factura por id. Lanza ValueError si no existe.
-    """
-    factura = db.query(Factura).filter(Factura.id == factura_id).first()
+def obtener_factura(db: Session, factura_id: int, empresa_id: int) -> Factura:
+    factura = (
+        db.query(Factura)
+        .filter(Factura.id == factura_id, Factura.empresa_id == empresa_id)
+        .first()
+    )
     if not factura:
         raise ValueError("Factura no encontrada")
     return factura
@@ -286,14 +294,12 @@ def obtener_factura(db: Session, factura_id: int) -> Factura:
 
 def listar_facturas(
     db: Session,
+    empresa_id: int,
     periodo: str | None = None,
     cliente_id: int | None = None,
     estado: str | None = None,
 ) -> list[Factura]:
-    """
-    Lista facturas con filtros opcionales por periodo, cliente y estado.
-    """
-    query = db.query(Factura)
+    query = db.query(Factura).filter(Factura.empresa_id == empresa_id)
     if periodo:
         query = query.filter(Factura.periodo == periodo)
     if cliente_id:
@@ -326,6 +332,7 @@ def serializar_factura(factura: Factura, db: Session) -> dict:
     cliente = db.query(Cliente).filter(Cliente.id == factura.cliente_id).first()
     return {
         "id": factura.id,
+        "empresa_id": factura.empresa_id,
         "cliente_id": factura.cliente_id,
         "nombre_cliente": cliente.nombre if cliente else None,
         "periodo": factura.periodo,
@@ -358,14 +365,11 @@ def serializar_factura(factura: Factura, db: Session) -> dict:
     }
 
 
-def construir_pdf_factura(factura_id: int, db: Session) -> BytesIO:
-    """
-    Genera el PDF interno (respaldo propio, sin depender de SimpleAPI/SII)
-    de una factura individual, usando el snapshot guardado al emitirla.
-    """
-    factura = obtener_factura(db, factura_id)
+def construir_pdf_factura(factura_id: int, db: Session, empresa_id: int) -> BytesIO:
+    factura = obtener_factura(db, factura_id, empresa_id)
     cliente = db.query(Cliente).filter(Cliente.id == factura.cliente_id).first()
-    config = obtener_configuracion(db)
+    config = obtener_configuracion(db, empresa_id)
+    
 
     styles = getSampleStyleSheet()
     style_info = ParagraphStyle(
@@ -476,8 +480,8 @@ def construir_pdf_factura(factura_id: int, db: Session) -> BytesIO:
     col_izquierda = [
         titulo_m3,
         Spacer(1, 0.3 * cm),
-        Paragraph(f"Lectura actual: {fecha_lect_actual_str}   {factura.lectura_actual:.0f}", style_small),
-        Paragraph(f"Lectura anterior: {fecha_lect_anterior_str}   {factura.lectura_anterior:.0f}", style_small),
+        Paragraph(f"Lectura actual: {factura.lectura_actual:.0f}   ({fecha_lect_actual_str})", style_small),
+        Paragraph(f"Lectura anterior: {factura.lectura_anterior:.0f}   ({fecha_lect_anterior_str})", style_small),
         Paragraph(f"<b>Consumo calculado: {factura.consumo_m3:.0f}</b>", style_small_bold),
         Spacer(1, 0.3 * cm),
         tabla_tramos,
@@ -593,28 +597,21 @@ def construir_pdf_factura(factura_id: int, db: Session) -> BytesIO:
     return buffer
 
 
-def construir_reporte_facturacion(periodo: str, db: Session) -> dict:
-    """
-    Arma el reporte de facturación con respaldo para un periodo dado.
-    Usado por el endpoint JSON y los exports (Excel/PDF).
-    Lee directo de la tabla Factura (fuente de verdad, snapshot congelado
-    al emitir), así el reporte siempre coincide exactamente con la boleta
-    real que recibió cada cliente. Requiere que las facturas del periodo
-    ya hayan sido generadas; lanza ValueError si no hay ninguna.
-
-    Optimizado para evitar consultas N+1: en vez de una query a Cliente,
-    Factura (anterior) y Pago por cada factura del período, se cargan
-    todas de una vez (3 queries grandes) y se cruzan en memoria.
-    """
-    facturas = db.query(Factura).filter(Factura.periodo == periodo).all()
+def construir_reporte_facturacion(periodo: str, db: Session, empresa_id: int) -> dict:
+    facturas = (
+        db.query(Factura)
+        .filter(Factura.periodo == periodo, Factura.empresa_id == empresa_id)
+        .all()
+    )
     if not facturas:
         raise ValueError(
             "No hay facturas emitidas para este periodo. "
             "Genera las facturas en el módulo de Facturación primero."
         )
 
-    tarifa = obtener_tarifa_vigente(db, periodo)
-    config = obtener_configuracion(db)
+    tarifa = obtener_tarifa_vigente(db, periodo, empresa_id)
+    config = obtener_configuracion(db, empresa_id)
+    # ... el resto de la función sigue exactamente igual ...
 
     cliente_ids = [f.cliente_id for f in facturas]
 
@@ -728,11 +725,8 @@ def construir_reporte_facturacion(periodo: str, db: Session) -> dict:
         "detalle": detalle,
     }
 
-def construir_excel_reporte_facturacion(periodo: str, db: Session) -> BytesIO:
-    """
-    Genera el Excel del reporte de facturación con respaldo (fiscalización SISS).
-    """
-    reporte = construir_reporte_facturacion(periodo, db)
+def construir_excel_reporte_facturacion(periodo: str, db: Session, empresa_id: int) -> BytesIO:
+    reporte = construir_reporte_facturacion(periodo, db, empresa_id)
 
     wb = Workbook()
     ws = wb.active
@@ -810,11 +804,8 @@ def construir_excel_reporte_facturacion(periodo: str, db: Session) -> BytesIO:
     return buffer
 
 
-def construir_pdf_reporte_facturacion(periodo: str, db: Session) -> BytesIO:
-    """
-    Genera el PDF del reporte de facturación con respaldo (fiscalización SISS).
-    """
-    reporte = construir_reporte_facturacion(periodo, db)
+def construir_pdf_reporte_facturacion(periodo: str, db: Session, empresa_id: int) -> BytesIO:
+    reporte = construir_reporte_facturacion(periodo, db, empresa_id)
     styles = getSampleStyleSheet()
 
     buffer = BytesIO()

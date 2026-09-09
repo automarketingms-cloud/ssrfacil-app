@@ -12,6 +12,8 @@ class ConfiguracionBase(BaseModel):
     horario_atencion: Optional[str] = None
     email: Optional[str] = None
     giro: Optional[str] = None
+    comuna: Optional[str] = None
+    actividad_economica: Optional[list[int]] = None
     dias_plazo_pago: int = Field(default=30, gt=0)
     dia_facturacion: int = Field(default=20, ge=1, le=31)
     tasa_interes_mora: float = Field(default=0, ge=0)
@@ -32,6 +34,7 @@ class ConfiguracionUpdate(ConfiguracionBase):
 
 class ConfiguracionResponse(ConfiguracionBase):
     id: int
+    certificado_pfx_path: Optional[str] = None
 
     class Config:
         from_attributes = True

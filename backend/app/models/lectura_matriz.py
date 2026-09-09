@@ -1,10 +1,11 @@
-from sqlalchemy import Column, Integer, Float, Date, String, UniqueConstraint
+from sqlalchemy import Column, Integer, Float, Date, String, ForeignKey, UniqueConstraint
 from app.core.database import Base 
 
 class LecturaMatriz(Base):
     __tablename__ = "lectura_matriz"
 
     id = Column(Integer, primary_key=True, index=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
     periodo = Column(String, nullable=False)
     fecha_lectura = Column(Date, nullable=False)
     lectura_actual = Column(Float, nullable=False)
@@ -13,7 +14,7 @@ class LecturaMatriz(Base):
     foto_ruta = Column(String, nullable=True)
 
     __table_args__ = (
-        UniqueConstraint("periodo", name="uq_lectura_matriz_periodo"),
+        UniqueConstraint("empresa_id", "periodo", name="uq_lectura_matriz_empresa_periodo"),
     )
 
     @property

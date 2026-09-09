@@ -50,6 +50,7 @@ class ClienteUpdate(BaseModel):
 
 class ClienteResponse(ClienteBase):
     id: int
+    empresa_id: int
 
     class Config:
         from_attributes = True

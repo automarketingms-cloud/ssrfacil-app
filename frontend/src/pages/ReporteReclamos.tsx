@@ -1,8 +1,8 @@
 import { useState } from "react";
 import {
   obtenerReporteReclamos,
-  urlReporteReclamosExcel,
-  urlReporteReclamosPdf,
+  descargarReporteReclamosExcel,
+  descargarReporteReclamosPdf,
 } from "../api/reportes";
 import type { ReporteReclamos as ReporteReclamosType } from "../types";
 
@@ -37,6 +37,16 @@ export default function ReporteReclamos() {
     }
   };
 
+  const manejarDescarga = async (fn: () => Promise<void>) => {
+    try {
+      await fn();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Error al descargar el reporte",
+      );
+    }
+  };
+
   return (
     <div className="max-w-5xl space-y-6">
       <div>
@@ -48,7 +58,7 @@ export default function ReporteReclamos() {
           fiscalización SISS.
         </p>
 
-        <div className="flex items-end gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
           <div>
             <label className="block text-sm text-muted mb-1">Periodo</label>
             <input
@@ -83,19 +93,27 @@ export default function ReporteReclamos() {
                 Resumen — {reporte.periodo}
               </h2>
               <div className="flex gap-2">
-                <a
-                  href={urlReporteReclamosExcel(reporte.periodo)}
+                <button
+                  onClick={() =>
+                    manejarDescarga(() =>
+                      descargarReporteReclamosExcel(reporte.periodo),
+                    )
+                  }
                   className="text-sm bg-gray-100 hover:bg-gray-200 text-text px-3 py-1.5 rounded-lg"
                 >
                   Descargar Excel
-                </a>
+                </button>
 
-                <a
-                  href={urlReporteReclamosPdf(reporte.periodo)}
+                <button
+                  onClick={() =>
+                    manejarDescarga(() =>
+                      descargarReporteReclamosPdf(reporte.periodo),
+                    )
+                  }
                   className="text-sm bg-gray-100 hover:bg-gray-200 text-text px-3 py-1.5 rounded-lg"
                 >
                   Descargar PDF
-                </a>
+                </button>
               </div>
             </div>
 
@@ -166,6 +184,8 @@ function TablaReclamos({
 }: {
   reclamos: ReporteReclamosType["detalle"];
 }) {
+  const [expandido, setExpandido] = useState<string | null>(null);
+
   return (
     <div className="overflow-x-auto bg-surface border border-border rounded-xl">
       <table className="min-w-full text-sm">
@@ -179,29 +199,88 @@ function TablaReclamos({
             <th className="px-4 py-2 font-medium">Estado</th>
             <th className="px-4 py-2 font-medium">Días Hábiles Respuesta</th>
             <th className="px-4 py-2 font-medium">Fuera de Plazo</th>
+            <th className="px-4 py-2 font-medium">Mediciones</th>
           </tr>
         </thead>
         <tbody>
-          {reclamos.map((r) => (
-            <tr key={r.folio} className="border-t border-border">
-              <td className="px-4 py-2">{r.folio}</td>
-              <td className="px-4 py-2">{r.tipo_reclamo}</td>
-              <td className="px-4 py-2">{r.nombre_reclamante ?? "—"}</td>
-              <td className="px-4 py-2">{r.fecha_recepcion}</td>
-              <td className="px-4 py-2">{r.plazo_vencimiento}</td>
-              <td className="px-4 py-2">{ETIQUETAS_ESTADO[r.estado]}</td>
-              <td className="px-4 py-2">{r.dias_habiles_respuesta ?? "—"}</td>
-              <td className="px-4 py-2">
-                {r.fuera_de_plazo === null ? (
-                  "—"
-                ) : r.fuera_de_plazo ? (
-                  <span className="text-red-600 font-medium">Sí</span>
-                ) : (
-                  "No"
+          {reclamos.map((r) => {
+            const tieneMediciones = r.mediciones_presion.length > 0;
+            const estaExpandido = expandido === r.folio;
+            return (
+              <>
+                <tr key={r.folio} className="border-t border-border">
+                  <td className="px-4 py-2">{r.folio}</td>
+                  <td className="px-4 py-2">{r.tipo_reclamo}</td>
+                  <td className="px-4 py-2">{r.nombre_reclamante ?? "—"}</td>
+                  <td className="px-4 py-2">{r.fecha_recepcion}</td>
+                  <td className="px-4 py-2">{r.plazo_vencimiento}</td>
+                  <td className="px-4 py-2">{ETIQUETAS_ESTADO[r.estado]}</td>
+                  <td className="px-4 py-2">
+                    {r.dias_habiles_respuesta ?? "—"}
+                  </td>
+                  <td className="px-4 py-2">
+                    {r.fuera_de_plazo === null ? (
+                      "—"
+                    ) : r.fuera_de_plazo ? (
+                      <span className="text-red-600 font-medium">Sí</span>
+                    ) : (
+                      "No"
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    {tieneMediciones ? (
+                      <button
+                        onClick={() =>
+                          setExpandido(estaExpandido ? null : r.folio)
+                        }
+                        className="text-primary-dark hover:underline font-medium"
+                      >
+                        {r.mediciones_presion.length}{" "}
+                        {estaExpandido ? "▲" : "▼"}
+                      </button>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </td>
+                </tr>
+                {estaExpandido && tieneMediciones && (
+                  <tr
+                    key={`${r.folio}-mediciones`}
+                    className="border-t border-border bg-primary-light/10"
+                  >
+                    <td colSpan={9} className="px-4 py-3">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-muted text-left">
+                            <th className="px-2 py-1 font-medium">Fecha</th>
+                            <th className="px-2 py-1 font-medium">
+                              Presión (mca)
+                            </th>
+                            <th className="px-2 py-1 font-medium">Cumple</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {r.mediciones_presion.map((m, i) => (
+                            <tr key={i} className="border-t border-border/50">
+                              <td className="px-2 py-1">{m.fecha_medicion}</td>
+                              <td className="px-2 py-1">{m.presion_mca}</td>
+                              <td className="px-2 py-1">
+                                {m.cumple ? (
+                                  <span className="text-primary-dark">Sí</span>
+                                ) : (
+                                  <span className="text-red-600">No</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
                 )}
-              </td>
-            </tr>
-          ))}
+              </>
+            );
+          })}
         </tbody>
       </table>
     </div>

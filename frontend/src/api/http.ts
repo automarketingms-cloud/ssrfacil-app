@@ -2,6 +2,7 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 interface FetchOptions extends RequestInit {
   skipAuth?: boolean;
+  responseType?: "json" | "blob";
 }
 
 export class ApiError extends Error {
@@ -36,7 +37,7 @@ export async function apiFetch<T>(
   path: string,
   options: FetchOptions = {},
 ): Promise<T> {
-  const { skipAuth, headers, ...rest } = options;
+  const { skipAuth, headers, responseType = "json", ...rest } = options;
 
   const finalHeaders: HeadersInit = {
     ...(!(rest.body instanceof FormData) && {
@@ -71,5 +72,10 @@ export async function apiFetch<T>(
   }
 
   if (response.status === 204) return undefined as T;
+
+  if (responseType === "blob") {
+    return response.blob() as unknown as Promise<T>;
+  }
+
   return response.json();
 }

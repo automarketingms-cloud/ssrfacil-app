@@ -137,7 +137,7 @@ export default function CrearTarifa() {
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-text mb-1">
               Cargo fijo
@@ -200,7 +200,7 @@ export default function CrearTarifa() {
             {tramos.map((tramo, index) => (
               <div
                 key={index}
-                className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-3 items-end bg-bg border border-border rounded-lg p-3"
+                className="grid grid-cols-2 sm:grid-cols-[auto_1fr_1fr_1fr_auto] gap-3 items-end bg-bg border border-border rounded-lg p-3"
               >
                 <div className="text-xs font-medium text-muted pt-2">
                   Tramo {tramo.numero_tramo}

@@ -1,4 +1,3 @@
-# app/models/usuario.py
 import enum
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum as SAEnum, ForeignKey

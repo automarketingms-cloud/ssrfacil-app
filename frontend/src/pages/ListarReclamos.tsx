@@ -1,4 +1,3 @@
-// pages/ListarReclamos.tsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { listarReclamos } from "../api/reclamos";
@@ -71,7 +70,7 @@ export default function ListarReclamos() {
 
   return (
     <div className="max-w-5xl">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h1 className="text-xl font-semibold text-text">Libro de Reclamos</h1>
         <Link
           to="/reclamos/nuevo"
@@ -81,7 +80,7 @@ export default function ListarReclamos() {
         </Link>
       </div>
 
-      <div className="flex gap-4 mb-4">
+      <div className="flex flex-wrap gap-4 mb-4">
         <input
           type="month"
           value={periodo}
@@ -102,53 +101,55 @@ export default function ListarReclamos() {
       </div>
 
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-primary-light/40 text-text">
-            <tr>
-              <th className="text-left px-4 py-2 font-medium">Folio</th>
-              <th className="text-left px-4 py-2 font-medium">Reclamante</th>
-              <th className="text-left px-4 py-2 font-medium">Tipo</th>
-              <th className="text-left px-4 py-2 font-medium">
-                Fecha recepción
-              </th>
-              <th className="text-left px-4 py-2 font-medium">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cargando ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-primary-light/40 text-text">
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-muted">
-                  Cargando...
-                </td>
+                <th className="text-left px-4 py-2 font-medium">Folio</th>
+                <th className="text-left px-4 py-2 font-medium">Reclamante</th>
+                <th className="text-left px-4 py-2 font-medium">Tipo</th>
+                <th className="text-left px-4 py-2 font-medium">
+                  Fecha recepción
+                </th>
+                <th className="text-left px-4 py-2 font-medium">Estado</th>
               </tr>
-            ) : reclamos.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-muted">
-                  Sin reclamos para este filtro
-                </td>
-              </tr>
-            ) : (
-              reclamos.map((r) => (
-                <tr key={r.id} className="border-t border-border">
-                  <td className="px-4 py-2">
-                    <Link
-                      to={`/reclamos/${r.id}`}
-                      className="text-primary font-medium"
-                    >
-                      {r.folio}
-                    </Link>
+            </thead>
+            <tbody>
+              {cargando ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-muted">
+                    Cargando...
                   </td>
-                  <td className="px-4 py-2">{r.nombre_reclamante ?? "—"}</td>
-                  <td className="px-4 py-2">{r.tipo_reclamo}</td>
-                  <td className="px-4 py-2">
-                    {r.fecha_recepcion.slice(0, 10)}
-                  </td>
-                  <td className="px-4 py-2">{badgeEstado(r)}</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : reclamos.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-muted">
+                    Sin reclamos para este filtro
+                  </td>
+                </tr>
+              ) : (
+                reclamos.map((r) => (
+                  <tr key={r.id} className="border-t border-border">
+                    <td className="px-4 py-2">
+                      <Link
+                        to={`/reclamos/${r.id}`}
+                        className="text-primary font-medium"
+                      >
+                        {r.folio}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-2">{r.nombre_reclamante ?? "—"}</td>
+                    <td className="px-4 py-2">{r.tipo_reclamo}</td>
+                    <td className="px-4 py-2">
+                      {r.fecha_recepcion.slice(0, 10)}
+                    </td>
+                    <td className="px-4 py-2">{badgeEstado(r)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ class Tarifa(Base):
     __tablename__ = "tarifas"
 
     id = Column(Integer, primary_key=True, index=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
     nombre = Column(String, nullable=False)          # ej: "Tarifa 2026"
     cargo_fijo = Column(Float, nullable=False)        # monto fijo mensual
     valor_fondo_reposicion = Column(Float, nullable=False, default=0)  # $/m3

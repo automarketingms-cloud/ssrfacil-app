@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { MedicionPresion } from "../types";
 import { obtenerHistorialPresion } from "../api/presion";
 import {
-  urlDescargaExcelPresion,
-  urlDescargaPdfPresion,
+  descargarReportePresionExcel,
+  descargarReportePresionPdf,
 } from "../api/reportes";
 
 export default function ReportePresion() {
@@ -13,11 +13,7 @@ export default function ReportePresion() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    cargarHistorial();
-  }, [desde, hasta]);
-
-  async function cargarHistorial() {
+  const cargarHistorial = useCallback(async () => {
     setCargando(true);
     setError(null);
     try {
@@ -31,6 +27,20 @@ export default function ReportePresion() {
     } finally {
       setCargando(false);
     }
+  }, [desde, hasta]);
+
+  useEffect(() => {
+    cargarHistorial();
+  }, [cargarHistorial]);
+
+  async function manejarDescarga(fn: () => Promise<void>) {
+    try {
+      await fn();
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Error al descargar el reporte",
+      );
+    }
   }
 
   return (
@@ -43,7 +53,7 @@ export default function ReportePresion() {
         presentar en caso de fiscalización.
       </p>
 
-      <div className="mb-6 flex gap-4 items-end">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-end gap-4">
         <div>
           <label className="block text-sm font-medium text-muted mb-1">
             Desde
@@ -67,19 +77,33 @@ export default function ReportePresion() {
           />
         </div>
 
-        <a
-          href={urlDescargaExcelPresion(desde || undefined, hasta || undefined)}
+        <button
+          onClick={() =>
+            manejarDescarga(() =>
+              descargarReportePresionExcel(
+                desde || undefined,
+                hasta || undefined,
+              ),
+            )
+          }
           className="text-sm font-medium rounded-lg px-4 py-2 border border-border text-text hover:bg-primary-light/30 transition-colors"
         >
           Descargar Excel
-        </a>
+        </button>
 
-        <a
-          href={urlDescargaPdfPresion(desde || undefined, hasta || undefined)}
+        <button
+          onClick={() =>
+            manejarDescarga(() =>
+              descargarReportePresionPdf(
+                desde || undefined,
+                hasta || undefined,
+              ),
+            )
+          }
           className="text-sm font-medium rounded-lg px-4 py-2 border border-border text-text hover:bg-primary-light/30 transition-colors"
         >
           Descargar PDF
-        </a>
+        </button>
       </div>
 
       {error && (

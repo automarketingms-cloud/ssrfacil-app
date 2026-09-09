@@ -39,7 +39,10 @@ export default function ResumenMensual() {
         Consumo y total a pagar de todos los clientes en un período.
       </p>
 
-      <form onSubmit={handleBuscar} className="flex items-end gap-3 mb-6">
+      <form
+        onSubmit={handleBuscar}
+        className="flex flex-col sm:flex-row sm:items-end gap-3 mb-6"
+      >
         <div>
           <label className="block text-sm font-medium text-text mb-1">
             Período
@@ -75,62 +78,68 @@ export default function ResumenMensual() {
             </p>
           ) : (
             <>
-              <table className="w-full text-sm">
-                <thead className="bg-primary-light/40 text-text">
-                  <tr>
-                    <th className="text-left px-4 py-2 font-medium">Cliente</th>
-                    <th className="text-left px-4 py-2 font-medium">Socio</th>
-                    <th className="text-right px-4 py-2 font-medium">
-                      Consumo (m³)
-                    </th>
-                    <th className="text-right px-4 py-2 font-medium">
-                      Fondo Repos.
-                    </th>
-                    <th className="text-right px-4 py-2 font-medium">
-                      Subsidio
-                    </th>
-                    <th className="text-right px-4 py-2 font-medium">IVA</th>
-                    <th className="text-right px-4 py-2 font-medium">
-                      Total a pagar
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resumen.map((c) => (
-                    <tr key={c.cliente_id} className="border-t border-border">
-                      <td className="px-4 py-2 text-text">
-                        {c.nombre_cliente}
-                      </td>
-                      <td className="px-4 py-2">
-                        {c.es_socio ? (
-                          <span className="text-xs font-medium bg-primary-light text-primary-dark px-2 py-1 rounded-full">
-                            Socio
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted">No socio</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2 text-right text-muted">
-                        {c.consumo_m3}
-                      </td>
-                      <td className="px-4 py-2 text-right text-muted">
-                        {formatoCLP(c.cargo_fondo_reposicion)}
-                      </td>
-                      <td className="px-4 py-2 text-right text-muted">
-                        {c.subsidio_aplicado > 0
-                          ? `-${formatoCLP(c.subsidio_aplicado)}`
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-2 text-right text-muted">
-                        {c.iva_aplicado > 0 ? formatoCLP(c.iva_aplicado) : "—"}
-                      </td>
-                      <td className="px-4 py-2 text-right font-medium text-text">
-                        {formatoCLP(c.total_a_pagar)}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-primary-light/40 text-text">
+                    <tr>
+                      <th className="text-left px-4 py-2 font-medium">
+                        Cliente
+                      </th>
+                      <th className="text-left px-4 py-2 font-medium">Socio</th>
+                      <th className="text-right px-4 py-2 font-medium">
+                        Consumo (m³)
+                      </th>
+                      <th className="text-right px-4 py-2 font-medium">
+                        Fondo Repos.
+                      </th>
+                      <th className="text-right px-4 py-2 font-medium">
+                        Subsidio
+                      </th>
+                      <th className="text-right px-4 py-2 font-medium">IVA</th>
+                      <th className="text-right px-4 py-2 font-medium">
+                        Total a pagar
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {resumen.map((c) => (
+                      <tr key={c.cliente_id} className="border-t border-border">
+                        <td className="px-4 py-2 text-text">
+                          {c.nombre_cliente}
+                        </td>
+                        <td className="px-4 py-2">
+                          {c.es_socio ? (
+                            <span className="text-xs font-medium bg-primary-light text-primary-dark px-2 py-1 rounded-full">
+                              Socio
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted">No socio</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-right text-muted">
+                          {c.consumo_m3}
+                        </td>
+                        <td className="px-4 py-2 text-right text-muted">
+                          {formatoCLP(c.cargo_fondo_reposicion)}
+                        </td>
+                        <td className="px-4 py-2 text-right text-muted">
+                          {c.subsidio_aplicado > 0
+                            ? `-${formatoCLP(c.subsidio_aplicado)}`
+                            : "—"}
+                        </td>
+                        <td className="px-4 py-2 text-right text-muted">
+                          {c.iva_aplicado > 0
+                            ? formatoCLP(c.iva_aplicado)
+                            : "—"}
+                        </td>
+                        <td className="px-4 py-2 text-right font-medium text-text">
+                          {formatoCLP(c.total_a_pagar)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               <div className="flex justify-between items-center px-4 py-3 bg-primary-light/20 border-t border-border">
                 <span className="text-sm font-medium text-text">

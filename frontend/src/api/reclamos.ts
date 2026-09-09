@@ -1,22 +1,11 @@
-const API_URL = import.meta.env.VITE_API_URL;
-
+import { apiFetch } from "./http";
 import type { ReclamoCreate, Reclamo } from "../types";
 
-async function manejarRespuesta(res: Response) {
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.detail || "Error en la solicitud");
-  }
-  return res.json();
-}
-
 export async function crearReclamo(datos: ReclamoCreate): Promise<Reclamo> {
-  const res = await fetch(`${API_URL}/reclamos/`, {
+  return apiFetch<Reclamo>("/reclamos/", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(datos),
   });
-  return manejarRespuesta(res);
 }
 
 export async function listarReclamos(filtros?: {
@@ -30,42 +19,35 @@ export async function listarReclamos(filtros?: {
   if (filtros?.cliente_id)
     params.append("cliente_id", String(filtros.cliente_id));
 
-  const res = await fetch(`${API_URL}/reclamos/?${params.toString()}`);
-  return manejarRespuesta(res);
+  return apiFetch<Reclamo[]>(`/reclamos/?${params.toString()}`);
 }
 
 export async function obtenerReclamo(id: number): Promise<Reclamo> {
-  const res = await fetch(`${API_URL}/reclamos/${id}`);
-  return manejarRespuesta(res);
+  return apiFetch<Reclamo>(`/reclamos/${id}`);
 }
 
 export async function responderReclamo(
   id: number,
   respuesta: string,
 ): Promise<Reclamo> {
-  const res = await fetch(`${API_URL}/reclamos/${id}/responder`, {
+  return apiFetch<Reclamo>(`/reclamos/${id}/responder`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ respuesta }),
   });
-  return manejarRespuesta(res);
 }
 
 export async function cerrarReclamo(id: number): Promise<Reclamo> {
-  const res = await fetch(`${API_URL}/reclamos/${id}/cerrar`, {
+  return apiFetch<Reclamo>(`/reclamos/${id}/cerrar`, {
     method: "PATCH",
   });
-  return manejarRespuesta(res);
 }
 
 export async function cerrarReclamoSinRespuesta(
   id: number,
   motivo: string,
 ): Promise<Reclamo> {
-  const res = await fetch(`${API_URL}/reclamos/${id}/cerrar-sin-respuesta`, {
+  return apiFetch<Reclamo>(`/reclamos/${id}/cerrar-sin-respuesta`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ motivo }),
   });
-  return manejarRespuesta(res);
 }

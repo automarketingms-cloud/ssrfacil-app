@@ -8,6 +8,7 @@ class MedicionPresion(Base):
     __tablename__ = "mediciones_presion"
 
     id = Column(Integer, primary_key=True, index=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
     punto_medicion = Column(String, nullable=False)
     ubicacion = Column(String, nullable=True)
     fecha_medicion = Column(Date, nullable=False)
@@ -15,6 +16,8 @@ class MedicionPresion(Base):
     presion_mca = Column(Numeric, nullable=False)
     observaciones = Column(Text, nullable=True)
     reclamo_id = Column(Integer, ForeignKey("reclamos.id"), nullable=True)
+    cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=True)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
 
     reclamo = relationship("Reclamo")
+    cliente = relationship("Cliente")

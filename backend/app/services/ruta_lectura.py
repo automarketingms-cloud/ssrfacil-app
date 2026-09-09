@@ -18,17 +18,19 @@ def obtener_periodo_actual() -> str:
     return f"{hoy.year}-{hoy.month:02d}"
 
 
-def construir_ruta_lectura(db: Session, estado: str | None = None) -> dict:
+def construir_ruta_lectura(db: Session, empresa_id: int, estado: str | None = None) -> dict:
     """
-    Clientes activos del período actual con su estado de lectura.
-    estado: "pendiente", "leido", o None (todos).
-    Ordenados por número de medidor.
+    Clientes activos del período actual (de la empresa del usuario
+    logueado) con su estado de lectura. estado: "pendiente", "leido",
+    o None (todos). Ordenados por número de medidor.
     """
     periodo = obtener_periodo_actual()
 
-    leidos_subquery = select(Lectura.cliente_id).where(Lectura.periodo == periodo)
+    leidos_subquery = select(Lectura.cliente_id).where(
+        Lectura.periodo == periodo, Lectura.empresa_id == empresa_id
+    )
 
-    query = db.query(Cliente).filter(Cliente.activo == True)
+    query = db.query(Cliente).filter(Cliente.activo == True, Cliente.empresa_id == empresa_id)
 
     if estado == "pendiente":
         query = query.filter(~Cliente.id.in_(leidos_subquery))
@@ -39,7 +41,9 @@ def construir_ruta_lectura(db: Session, estado: str | None = None) -> dict:
 
     ids_leidos = {
         row[0]
-        for row in db.query(Lectura.cliente_id).filter(Lectura.periodo == periodo).all()
+        for row in db.query(Lectura.cliente_id)
+        .filter(Lectura.periodo == periodo, Lectura.empresa_id == empresa_id)
+        .all()
     }
 
     detalle = [
@@ -63,8 +67,8 @@ def construir_ruta_lectura(db: Session, estado: str | None = None) -> dict:
         "clientes": detalle,
     }
 
-def construir_excel_ruta_lectura(db: Session) -> BytesIO:
-    datos = construir_ruta_lectura(db)
+def construir_excel_ruta_lectura(db: Session, empresa_id: int) -> BytesIO:
+    datos = construir_ruta_lectura(db, empresa_id)
 
     wb = Workbook()
     ws = wb.active
@@ -88,8 +92,8 @@ def construir_excel_ruta_lectura(db: Session) -> BytesIO:
     return buffer
 
 
-def construir_pdf_ruta_lectura(db: Session) -> BytesIO:
-    datos = construir_ruta_lectura(db)
+def construir_pdf_ruta_lectura(db: Session, empresa_id: int) -> BytesIO:
+    datos = construir_ruta_lectura(db, empresa_id)
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)

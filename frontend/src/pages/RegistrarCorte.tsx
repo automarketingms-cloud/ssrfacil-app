@@ -202,7 +202,7 @@ export default function RegistrarCorte() {
             {cortesAbiertos.map((corte) => (
               <li
                 key={corte.id}
-                className="bg-surface border border-border rounded-xl p-4 flex justify-between items-center"
+                className="bg-surface border border-border rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2"
               >
                 <div>
                   <p className="text-text font-medium">

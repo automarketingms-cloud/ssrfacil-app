@@ -1,38 +1,34 @@
-import type { FacturaPendiente, Pago, PagoCreate } from "../types";
-
-const API_URL = import.meta.env.VITE_API_URL;
+import { apiFetch } from "./http";
+import type {
+  FacturaPendiente,
+  Pago,
+  PagoCreate,
+  HistorialPago,
+  PagoDelDia,
+} from "../types";
 
 export async function obtenerFacturasPendientes(
   clienteId: number,
 ): Promise<FacturaPendiente[]> {
-  const res = await fetch(`${API_URL}/pagos/pendientes/${clienteId}`);
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail ?? "Error al obtener facturas pendientes");
-  }
-  return res.json();
+  return apiFetch(`/pagos/pendientes/${clienteId}`);
+}
+
+export async function obtenerPagosDelDia(
+  fecha?: string,
+): Promise<PagoDelDia[]> {
+  const query = fecha ? `?fecha=${fecha}` : "";
+  return apiFetch(`/pagos/dia${query}`);
 }
 
 export async function registrarPago(pago: PagoCreate): Promise<Pago> {
-  const res = await fetch(`${API_URL}/pagos/`, {
+  return apiFetch(`/pagos/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(pago),
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail ?? "Error al registrar el pago");
-  }
-  return res.json();
 }
 
 export async function obtenerHistorialPagos(
   clienteId: number,
 ): Promise<HistorialPago[]> {
-  const res = await fetch(`${API_URL}/pagos/historial/${clienteId}`);
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail ?? "Error al obtener historial de pagos");
-  }
-  return res.json();
+  return apiFetch(`/pagos/historial/${clienteId}`);
 }

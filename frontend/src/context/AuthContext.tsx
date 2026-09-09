@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { login as loginApi } from "../api/auth";
 import type { Usuario } from "../types";
+import { tokenExpirado } from "../utils/jwt";
 
 interface AuthContextType {
   usuario: Usuario | null;
@@ -18,10 +19,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const token = localStorage.getItem("access_token");
     const stored = localStorage.getItem("usuario");
-    if (stored) {
-      setUsuario(JSON.parse(stored));
+
+    if (token && stored) {
+      if (tokenExpirado(token)) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("usuario");
+      } else {
+        setUsuario(JSON.parse(stored));
+      }
     }
+
     setIsLoading(false);
   }, []);
 

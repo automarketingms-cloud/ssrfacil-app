@@ -142,7 +142,7 @@ export default function DetalleReclamo() {
           </div>
         )}
 
-        <dl className="grid grid-cols-2 gap-4 text-sm">
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
             <dt className="text-muted">Reclamante</dt>
             <dd className="text-text">{reclamo.nombre_reclamante ?? "—"}</dd>

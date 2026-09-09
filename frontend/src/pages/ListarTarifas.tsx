@@ -50,7 +50,7 @@ export default function ListarTarifas() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
         <h1 className="text-xl font-semibold text-text">Tarifas</h1>
         <button
           onClick={() => navigate("/tarifas/nueva")}
@@ -81,7 +81,7 @@ export default function ListarTarifas() {
               key={t.id}
               className="bg-surface border border-border rounded-xl overflow-hidden"
             >
-              <div className="w-full flex items-center justify-between px-4 py-3 hover:bg-primary-light/20 transition-colors">
+              <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 hover:bg-primary-light/20 transition-colors">
                 <button
                   onClick={() => toggleExpandir(t.id)}
                   className="flex-1 text-left"
@@ -113,45 +113,49 @@ export default function ListarTarifas() {
               </div>
 
               {expandida === t.id && (
-                <table className="w-full text-sm border-t border-border">
-                  <thead className="bg-primary-light/40 text-text">
-                    <tr>
-                      <th className="text-left px-4 py-2 font-medium">Tramo</th>
-                      <th className="text-left px-4 py-2 font-medium">
-                        Desde (m³)
-                      </th>
-                      <th className="text-left px-4 py-2 font-medium">
-                        Hasta (m³)
-                      </th>
-                      <th className="text-left px-4 py-2 font-medium">
-                        Precio por m³
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {t.tramos
-                      .sort((a, b) => a.numero_tramo - b.numero_tramo)
-                      .map((tramo) => (
-                        <tr
-                          key={tramo.numero_tramo}
-                          className="border-t border-border"
-                        >
-                          <td className="px-4 py-2 text-text">
-                            Tramo {tramo.numero_tramo}
-                          </td>
-                          <td className="px-4 py-2 text-muted">
-                            {tramo.numero_tramo === 1 ? 0 : tramo.desde_m3}
-                          </td>
-                          <td className="px-4 py-2 text-muted">
-                            {tramo.hasta_m3 ?? "En adelante"}
-                          </td>
-                          <td className="px-4 py-2 text-muted">
-                            {formatoCLP(tramo.precio_m3)}
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-t border-border">
+                    <thead className="bg-primary-light/40 text-text">
+                      <tr>
+                        <th className="text-left px-4 py-2 font-medium">
+                          Tramo
+                        </th>
+                        <th className="text-left px-4 py-2 font-medium">
+                          Desde (m³)
+                        </th>
+                        <th className="text-left px-4 py-2 font-medium">
+                          Hasta (m³)
+                        </th>
+                        <th className="text-left px-4 py-2 font-medium">
+                          Precio por m³
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {t.tramos
+                        .sort((a, b) => a.numero_tramo - b.numero_tramo)
+                        .map((tramo) => (
+                          <tr
+                            key={tramo.numero_tramo}
+                            className="border-t border-border"
+                          >
+                            <td className="px-4 py-2 text-text">
+                              Tramo {tramo.numero_tramo}
+                            </td>
+                            <td className="px-4 py-2 text-muted">
+                              {tramo.numero_tramo === 1 ? 0 : tramo.desde_m3}
+                            </td>
+                            <td className="px-4 py-2 text-muted">
+                              {tramo.hasta_m3 ?? "En adelante"}
+                            </td>
+                            <td className="px-4 py-2 text-muted">
+                              {formatoCLP(tramo.precio_m3)}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           ))}

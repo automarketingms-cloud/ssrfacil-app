@@ -103,7 +103,7 @@ export default function RegistrarReclamo() {
         onSubmit={handleSubmit}
         className="space-y-4 bg-surface border border-border rounded-xl p-6"
       >
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <button
             type="button"
             onClick={() => setTieneCliente(true)}
@@ -152,7 +152,7 @@ export default function RegistrarReclamo() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Nombre reclamante"
               name="nombre_reclamante"

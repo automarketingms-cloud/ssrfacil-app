@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import require_roles
+from app.models.usuario import Usuario, RolUsuario
 from app.models.cliente import Cliente
 from app.models.lectura import Lectura
 from app.services.calculo_tarifa import (
@@ -16,8 +18,17 @@ router = APIRouter(prefix="/consumos", tags=["Consumos"])
 
 
 @router.get("/{cliente_id}/{periodo}")
-def obtener_consumo_y_cobro(cliente_id: int, periodo: str, db: Session = Depends(get_db)):
-    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+def obtener_consumo_y_cobro(
+    cliente_id: int,
+    periodo: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    cliente = (
+        db.query(Cliente)
+        .filter(Cliente.id == cliente_id, Cliente.empresa_id == current_user.empresa_id)
+        .first()
+    )
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
@@ -33,11 +44,11 @@ def obtener_consumo_y_cobro(cliente_id: int, periodo: str, db: Session = Depends
     consumo = calcular_consumo(lectura.lectura_actual, lectura_anterior)
 
     try:
-        tarifa = obtener_tarifa_vigente(db, periodo)
+        tarifa = obtener_tarifa_vigente(db, periodo, current_user.empresa_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    config = obtener_configuracion(db)
+    config = obtener_configuracion(db, current_user.empresa_id)
     desglose = calcular_total_a_pagar(consumo, tarifa, cliente, config.tasa_iva)
 
     return {
@@ -54,22 +65,35 @@ def obtener_consumo_y_cobro(cliente_id: int, periodo: str, db: Session = Depends
 
 
 @router.get("/")
-def resumen_mensual(periodo: str, db: Session = Depends(get_db)):
+def resumen_mensual(
+    periodo: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
     """
-    Devuelve el consumo y cobro de TODOS los clientes para un periodo dado.
+    Devuelve el consumo y cobro de TODOS los clientes de la empresa
+    logueada para un periodo dado.
     """
-    lecturas = db.query(Lectura).filter(Lectura.periodo == periodo).all()
+    lecturas = (
+        db.query(Lectura)
+        .filter(Lectura.periodo == periodo, Lectura.empresa_id == current_user.empresa_id)
+        .all()
+    )
 
     try:
-        tarifa = obtener_tarifa_vigente(db, periodo)
+        tarifa = obtener_tarifa_vigente(db, periodo, current_user.empresa_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    config = obtener_configuracion(db)
+    config = obtener_configuracion(db, current_user.empresa_id)
 
     resultado = []
     for lectura in lecturas:
-        cliente = db.query(Cliente).filter(Cliente.id == lectura.cliente_id).first()
+        cliente = (
+            db.query(Cliente)
+            .filter(Cliente.id == lectura.cliente_id, Cliente.empresa_id == current_user.empresa_id)
+            .first()
+        )
         if not cliente:
             continue
 

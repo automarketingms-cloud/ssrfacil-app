@@ -5,16 +5,23 @@ from sqlalchemy import or_
 from datetime import date
 
 from app.core.database import get_db
+from app.core.deps import get_current_user, require_roles
 from app.models.cliente import Cliente
+from app.models.usuario import Usuario, RolUsuario
 from app.schemas.cliente import ClienteResponse, ClienteCreate, ClienteUpdate, ClienteListResponse
 
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
 
 
 @router.post("/", response_model=ClienteResponse)
-def crear_cliente(cliente: ClienteCreate, db: Session = Depends(get_db)):
+def crear_cliente(
+    cliente: ClienteCreate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
     datos = cliente.model_dump()
     datos["fecha_ingreso"] = date.today()
+    datos["empresa_id"] = usuario.empresa_id
 
     nuevo_cliente = Cliente(**datos)
     db.add(nuevo_cliente)
@@ -26,6 +33,7 @@ def crear_cliente(cliente: ClienteCreate, db: Session = Depends(get_db)):
     db.refresh(nuevo_cliente)
     return nuevo_cliente
 
+
 @router.get("/", response_model=ClienteListResponse)
 def listar_clientes(
     activo: bool | None = None,
@@ -34,8 +42,9 @@ def listar_clientes(
     page: int = 1,
     limit: int = 20,
     db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
 ):
-    query = db.query(Cliente)
+    query = db.query(Cliente).filter(Cliente.empresa_id == usuario.empresa_id)
     if activo is not None:
         query = query.filter(Cliente.activo == activo)
     if es_socio is not None:
@@ -58,28 +67,53 @@ def listar_clientes(
 
 
 @router.get("/buscar/{rut}", response_model=ClienteResponse)
-def buscar_por_rut(rut: str, db: Session = Depends(get_db)):
-    cliente = db.query(Cliente).filter(Cliente.rut == rut).first()
+def buscar_por_rut(
+    rut: str,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    cliente = (
+        db.query(Cliente)
+        .filter(Cliente.rut == rut, Cliente.empresa_id == usuario.empresa_id)
+        .first()
+    )
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return cliente
 
 
 @router.get("/{cliente_id}", response_model=ClienteResponse)
-def obtener_cliente(cliente_id: int, db: Session = Depends(get_db)):
-    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+def obtener_cliente(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    cliente = (
+        db.query(Cliente)
+        .filter(Cliente.id == cliente_id, Cliente.empresa_id == usuario.empresa_id)
+        .first()
+    )
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return cliente
 
 
 @router.patch("/{cliente_id}", response_model=ClienteResponse)
-def actualizar_cliente(cliente_id: int, datos: ClienteUpdate, db: Session = Depends(get_db)):
-    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+def actualizar_cliente(
+    cliente_id: int,
+    datos: ClienteUpdate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    cliente = (
+        db.query(Cliente)
+        .filter(Cliente.id == cliente_id, Cliente.empresa_id == usuario.empresa_id)
+        .first()
+    )
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
-    datos_actualizados = datos.model_dump(exclude_unset=True)  # solo lo que vino en el body
+    datos_actualizados = datos.model_dump(exclude_unset=True)
     for campo, valor in datos_actualizados.items():
         setattr(cliente, campo, valor)
 
@@ -93,8 +127,16 @@ def actualizar_cliente(cliente_id: int, datos: ClienteUpdate, db: Session = Depe
 
 
 @router.patch("/{cliente_id}/desactivar", response_model=ClienteResponse)
-def desactivar_cliente(cliente_id: int, db: Session = Depends(get_db)):
-    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+def desactivar_cliente(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    cliente = (
+        db.query(Cliente)
+        .filter(Cliente.id == cliente_id, Cliente.empresa_id == usuario.empresa_id)
+        .first()
+    )
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     cliente.activo = False
@@ -104,8 +146,16 @@ def desactivar_cliente(cliente_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{cliente_id}/reactivar", response_model=ClienteResponse)
-def reactivar_cliente(cliente_id: int, db: Session = Depends(get_db)):
-    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+def reactivar_cliente(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    cliente = (
+        db.query(Cliente)
+        .filter(Cliente.id == cliente_id, Cliente.empresa_id == usuario.empresa_id)
+        .first()
+    )
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     cliente.activo = True

@@ -14,16 +14,20 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet
 
 
-def crear_corte(db: Session, corte: CorteCreate) -> CorteContinuidad:
-    nuevo_corte = CorteContinuidad(**corte.model_dump())
+def crear_corte(db: Session, corte: CorteCreate, empresa_id: int) -> CorteContinuidad:
+    nuevo_corte = CorteContinuidad(empresa_id=empresa_id, **corte.model_dump())
     db.add(nuevo_corte)
     db.commit()
     db.refresh(nuevo_corte)
     return nuevo_corte
 
 
-def cerrar_corte(db: Session, corte_id: int, cierre: CorteCierre) -> CorteContinuidad:
-    corte = db.query(CorteContinuidad).filter(CorteContinuidad.id == corte_id).first()
+def cerrar_corte(db: Session, corte_id: int, cierre: CorteCierre, empresa_id: int) -> CorteContinuidad:
+    corte = (
+        db.query(CorteContinuidad)
+        .filter(CorteContinuidad.id == corte_id, CorteContinuidad.empresa_id == empresa_id)
+        .first()
+    )
     if not corte:
         return None
     if corte.fecha_hora_termino is not None:
@@ -41,8 +45,8 @@ def calcular_duracion_horas(corte: CorteContinuidad) -> float | None:
     return round(delta.total_seconds() / 3600, 2)
 
 
-def listar_cortes(db: Session, periodo: str = None, solo_abiertos: bool = False):
-    query = db.query(CorteContinuidad)
+def listar_cortes(db: Session, empresa_id: int, periodo: str = None, solo_abiertos: bool = False):
+    query = db.query(CorteContinuidad).filter(CorteContinuidad.empresa_id == empresa_id)
     if solo_abiertos:
         query = query.filter(CorteContinuidad.fecha_hora_termino.is_(None))
     if periodo:
@@ -56,11 +60,11 @@ def listar_cortes(db: Session, periodo: str = None, solo_abiertos: bool = False)
         )
     return query.order_by(CorteContinuidad.fecha_hora_inicio.desc()).all()
 
-def contar_cortes_activos(db: Session) -> int:
+def contar_cortes_activos(db: Session, empresa_id: int) -> int:
     """Cuenta cortes sin reposición aún, sin traer los objetos completos."""
     return (
         db.query(func.count(CorteContinuidad.id))
-        .filter(CorteContinuidad.fecha_hora_termino.is_(None))
+        .filter(CorteContinuidad.fecha_hora_termino.is_(None), CorteContinuidad.empresa_id == empresa_id)
         .scalar()
         or 0
     )
@@ -79,13 +83,13 @@ def serializar_corte(corte: CorteContinuidad) -> dict:
         "duracion_horas": calcular_duracion_horas(corte),
     }
 
-def construir_reporte_continuidad(periodo: str, db: Session) -> dict:
+def construir_reporte_continuidad(periodo: str, db: Session, empresa_id: int) -> dict:
     """
     Reporte de continuidad de servicio (cortes y reposición) para fiscalización SISS.
     Incluye cortes activos (aún sin reposición) y cortes cerrados del periodo,
     con el detalle de cuánto demoró cada reposición.
     """
-    cortes = listar_cortes(db, periodo=periodo)
+    cortes = listar_cortes(db, empresa_id, periodo=periodo)
 
     if not cortes:
         raise ValueError(f"No hay cortes registrados para el periodo {periodo}")
@@ -124,8 +128,8 @@ def construir_reporte_continuidad(periodo: str, db: Session) -> dict:
         "cortes_cerrados": detalle_cerrados,
     }
 
-def construir_excel_reporte_continuidad(periodo: str, db: Session) -> BytesIO:
-    reporte = construir_reporte_continuidad(periodo, db)
+def construir_excel_reporte_continuidad(periodo: str, db: Session, empresa_id: int) -> BytesIO:
+    reporte = construir_reporte_continuidad(periodo, db, empresa_id)
 
     wb = Workbook()
     ws = wb.active
@@ -176,8 +180,8 @@ def construir_excel_reporte_continuidad(periodo: str, db: Session) -> BytesIO:
     return buffer
 
 
-def construir_pdf_reporte_continuidad(periodo: str, db: Session) -> BytesIO:
-    reporte = construir_reporte_continuidad(periodo, db)
+def construir_pdf_reporte_continuidad(periodo: str, db: Session, empresa_id: int) -> BytesIO:
+    reporte = construir_reporte_continuidad(periodo, db, empresa_id)
     styles = getSampleStyleSheet()
 
     buffer = BytesIO()

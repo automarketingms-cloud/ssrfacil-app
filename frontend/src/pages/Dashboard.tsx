@@ -23,7 +23,8 @@ import {
   CartesianGrid,
 } from "recharts";
 import { obtenerResumenDashboard } from "../api/dashboard";
-import type { ResumenDashboard } from "../types";
+import { obtenerAlertasFolios } from "../api/caf";
+import type { ResumenDashboard, AlertaFolio } from "../types";
 
 function periodoActual(): string {
   const hoy = new Date();
@@ -64,6 +65,7 @@ export default function Dashboard() {
   const [resumen, setResumen] = useState<ResumenDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [alertasFolios, setAlertasFolios] = useState<AlertaFolio[]>([]);
 
   useEffect(() => {
     async function cargar() {
@@ -78,6 +80,13 @@ export default function Dashboard() {
         );
       } finally {
         setLoading(false);
+      }
+
+      try {
+        const folios = await obtenerAlertasFolios();
+        setAlertasFolios(folios);
+      } catch {
+        // silencioso: no bloquea el dashboard si falla
       }
     }
     cargar();
@@ -101,10 +110,14 @@ export default function Dashboard() {
     cobrado: m.cobrado,
   }));
 
-  const alertas = [
+  const alertas: { texto: string; color: string }[] = [
     resumen.reclamos_fuera_de_plazo > 0 && {
       texto: `${resumen.reclamos_fuera_de_plazo} reclamo(s) fuera de plazo`,
       color: "text-danger",
+    },
+    resumen.reclamos_con_medicion_pendiente > 0 && {
+      texto: `${resumen.reclamos_con_medicion_pendiente} reclamo(s) con medición de presión registrada, pendiente(s) de responder`,
+      color: "text-primary-dark",
     },
     resumen.cortes_activos > 0 && {
       texto: `${resumen.cortes_activos} corte(s) sin reposición`,
@@ -123,6 +136,13 @@ export default function Dashboard() {
       color: "text-danger",
     },
   ].filter(Boolean) as { texto: string; color: string }[];
+
+  alertasFolios.forEach((f) => {
+    alertas.push({
+      texto: `Quedan ${f.folios_restantes} folios del CAF tipo ${f.tipo_dte} — carga uno nuevo`,
+      color: "text-amber-600",
+    });
+  });
 
   const accionesRapidas = [
     { label: "Nueva Lectura", icon: Droplet, to: "/lecturas" },
@@ -218,7 +238,7 @@ export default function Dashboard() {
                 <button
                   key={a.label}
                   onClick={() => navigate(a.to)}
-                  className="flex flex-col items-center gap-2 border border-border rounded-lg py-4 hover:bg-primary-light/40 transition-colors"
+                  className="flex flex-col items-center gap-2 border border-border rounded-lg py-4 hover:bg-primary-light/40 hover:border-primary transition-colors cursor-pointer"
                 >
                   <Icon size={20} className="text-primary-dark" />
                   <span className="text-xs font-medium text-text text-center">

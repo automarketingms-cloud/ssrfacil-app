@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   obtenerRutaLectura,
-  urlRutaLecturaExcel,
-  urlRutaLecturaPdf,
+  descargarRutaLecturaExcel,
+  descargarRutaLecturaPdf,
 } from "../api/rutaLectura";
 import type { RutaLectura as RutaLecturaType, EstadoLectura } from "../types";
 
@@ -41,6 +41,14 @@ export default function RutaLectura() {
       .finally(() => setCargando(false));
   }, [filtro]);
 
+  async function manejarDescarga(fn: () => Promise<void>) {
+    try {
+      await fn();
+    } catch {
+      setError("No se pudo descargar el archivo");
+    }
+  }
+
   if (error) return <p className="text-red-600">{error}</p>;
 
   return (
@@ -56,19 +64,19 @@ export default function RutaLectura() {
           )}
         </div>
         <div className="flex gap-2">
-          <a
-            href={urlRutaLecturaExcel()}
+          <button
+            onClick={() => manejarDescarga(descargarRutaLecturaExcel)}
             className="px-3 py-2 text-sm rounded border border-border bg-surface hover:bg-slate-50"
           >
             Descargar Excel
-          </a>
+          </button>
 
-          <a
-            href={urlRutaLecturaPdf()}
+          <button
+            onClick={() => manejarDescarga(descargarRutaLecturaPdf)}
             className="px-3 py-2 text-sm rounded border border-border bg-surface hover:bg-slate-50"
           >
             Descargar PDF
-          </a>
+          </button>
         </div>
       </div>
 

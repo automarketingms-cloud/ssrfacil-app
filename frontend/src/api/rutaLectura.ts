@@ -1,22 +1,27 @@
+import { apiFetch } from "./http";
 import type { EstadoLectura, RutaLectura } from "../types";
-
-const API_URL = import.meta.env.VITE_API_URL;
 
 export async function obtenerRutaLectura(
   estado?: EstadoLectura,
 ): Promise<RutaLectura> {
   const params = estado ? `?estado=${estado}` : "";
-  const res = await fetch(`${API_URL}/lecturas/ruta${params}`);
-  if (!res.ok) {
-    throw new Error("No se pudo obtener la ruta de lectura");
-  }
-  return res.json();
+  return apiFetch<RutaLectura>(`/lecturas/ruta${params}`);
 }
 
-export function urlRutaLecturaExcel(): string {
-  return `${API_URL}/lecturas/ruta/excel`;
+async function descargarBlob(path: string, filename: string): Promise<void> {
+  const blob = await apiFetch<Blob>(path, { responseType: "blob" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
-export function urlRutaLecturaPdf(): string {
-  return `${API_URL}/lecturas/ruta/pdf`;
+export function descargarRutaLecturaExcel(): Promise<void> {
+  return descargarBlob("/lecturas/ruta/excel", "ruta_lectura.xlsx");
+}
+
+export function descargarRutaLecturaPdf(): Promise<void> {
+  return descargarBlob("/lecturas/ruta/pdf", "ruta_lectura.pdf");
 }

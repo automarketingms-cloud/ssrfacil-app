@@ -6,6 +6,7 @@ from app.models.cliente import Cliente
 from app.models.reclamo import Reclamo
 from app.models.factura import Factura
 from app.models.pago import Pago
+from app.models.presion import MedicionPresion
 from sqlalchemy import case
 from app.services.continuidad import contar_cortes_activos
 
@@ -24,7 +25,7 @@ def _periodos_anteriores(periodo: str, cantidad: int) -> list[str]:
     return periodos
 
 
-def construir_resumen_dashboard(db: Session, periodo: str) -> dict:
+def construir_resumen_dashboard(db: Session, periodo: str, empresa_id: int) -> dict:
     # --- Clientes ---
     total_clientes_activos, total_socios, total_con_subsidio = (
         db.query(
@@ -32,7 +33,7 @@ def construir_resumen_dashboard(db: Session, periodo: str) -> dict:
             func.sum(case((Cliente.es_socio == True, 1), else_=0)),
             func.sum(case((Cliente.tiene_subsidio == True, 1), else_=0)),
         )
-        .filter(Cliente.activo == True)
+        .filter(Cliente.activo == True, Cliente.empresa_id == empresa_id)
         .first()
     )
     total_clientes_activos = total_clientes_activos or 0
@@ -46,7 +47,7 @@ def construir_resumen_dashboard(db: Session, periodo: str) -> dict:
             func.sum(Factura.consumo_m3),
             func.count(Factura.id),
         )
-        .filter(Factura.periodo == periodo)
+        .filter(Factura.periodo == periodo, Factura.empresa_id == empresa_id)
         .first()
     )
     facturacion_total_mes = round(total_facturado or 0.0, 2)
@@ -58,24 +59,40 @@ def construir_resumen_dashboard(db: Session, periodo: str) -> dict:
     hoy = date.today()
     total_reclamos_abiertos = (
         db.query(func.count(Reclamo.id))
-        .filter(Reclamo.estado == "abierto")
+        .filter(Reclamo.estado == "abierto", Reclamo.empresa_id == empresa_id)
         .scalar()
         or 0
     )
     total_reclamos_fuera_de_plazo = (
         db.query(func.count(Reclamo.id))
-        .filter(Reclamo.estado == "abierto", Reclamo.plazo_vencimiento < hoy)
+        .filter(
+            Reclamo.estado == "abierto",
+            Reclamo.plazo_vencimiento < hoy,
+            Reclamo.empresa_id == empresa_id,
+        )
+        .scalar()
+        or 0
+    )
+    # Reclamos abiertos que ya tienen una medición de presión registrada,
+    # esperando que oficina los responda/cierre.
+    total_reclamos_con_medicion_pendiente = (
+        db.query(func.count(func.distinct(Reclamo.id)))
+        .join(MedicionPresion, MedicionPresion.reclamo_id == Reclamo.id)
+        .filter(Reclamo.estado == "abierto", Reclamo.empresa_id == empresa_id)
         .scalar()
         or 0
     )
 
     # --- Cortes ---
-    total_cortes_activos = contar_cortes_activos(db)
+    total_cortes_activos = contar_cortes_activos(db, empresa_id)
 
     # --- Pendiente de cobro y morosos ---
     facturas_con_saldo = (
         db.query(Factura)
-        .filter(Factura.estado.in_(["pendiente", "parcial", "vencida"]))
+        .filter(
+            Factura.estado.in_(["pendiente", "parcial", "vencida"]),
+            Factura.empresa_id == empresa_id,
+        )
         .all()
     )
 
@@ -84,7 +101,7 @@ def construir_resumen_dashboard(db: Session, periodo: str) -> dict:
     if facturas_con_saldo_ids:
         rows = (
             db.query(Pago.factura_id, func.sum(Pago.monto))
-            .filter(Pago.factura_id.in_(facturas_con_saldo_ids))
+            .filter(Pago.factura_id.in_(facturas_con_saldo_ids), Pago.empresa_id == empresa_id)
             .group_by(Pago.factura_id)
             .all()
         )
@@ -106,14 +123,14 @@ def construir_resumen_dashboard(db: Session, periodo: str) -> dict:
 
     facturado_por_periodo = dict(
         db.query(Factura.periodo, func.sum(Factura.total_a_pagar))
-        .filter(Factura.periodo.in_(periodos_historicos))
+        .filter(Factura.periodo.in_(periodos_historicos), Factura.empresa_id == empresa_id)
         .group_by(Factura.periodo)
         .all()
     )
     cobrado_por_periodo = dict(
         db.query(Factura.periodo, func.sum(Pago.monto))
         .join(Pago, Pago.factura_id == Factura.id)
-        .filter(Factura.periodo.in_(periodos_historicos))
+        .filter(Factura.periodo.in_(periodos_historicos), Factura.empresa_id == empresa_id)
         .group_by(Factura.periodo)
         .all()
     )
@@ -138,6 +155,7 @@ def construir_resumen_dashboard(db: Session, periodo: str) -> dict:
         "medidores_sin_lectura": medidores_sin_lectura,
         "reclamos_abiertos": total_reclamos_abiertos,
         "reclamos_fuera_de_plazo": total_reclamos_fuera_de_plazo,
+        "reclamos_con_medicion_pendiente": total_reclamos_con_medicion_pendiente,
         "cortes_activos": total_cortes_activos,
         "monto_pendiente_cobro": monto_pendiente_cobro,
         "clientes_morosos": clientes_morosos,

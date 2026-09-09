@@ -88,7 +88,7 @@ export default function Facturacion() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-semibold text-text">Facturación</h1>
           <p className="text-sm text-muted">
@@ -110,7 +110,7 @@ export default function Facturacion() {
       </div>
 
       {/* Filtros */}
-      <div className="flex gap-3 mb-4">
+      <div className="flex flex-wrap gap-3 mb-4">
         <input
           type="month"
           value={periodo}
@@ -170,90 +170,94 @@ export default function Facturacion() {
             No hay facturas para este filtro.
           </p>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-bg text-muted text-xs uppercase">
-              <tr>
-                <th className="text-left px-4 py-2">Cliente</th>
-                <th className="text-left px-4 py-2">Emisión</th>
-                <th className="text-left px-4 py-2">Vencimiento</th>
-                <th className="text-right px-4 py-2">Arrastre</th>
-                <th className="text-right px-4 py-2">Total</th>
-                <th className="text-left px-4 py-2">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {facturas.map((f) => {
-                const tieneArrastre =
-                  f.saldo_anterior > 0 || f.interes_mora > 0;
-                return (
-                  <tr key={f.id} className="border-t border-border">
-                    <td className="px-4 py-2 text-text">
-                      <div className="flex items-center gap-2">
-                        <Link
-                          to={`/facturas/${f.id}`}
-                          className="hover:text-primary hover:underline"
-                        >
-                          {f.nombre_cliente ?? `#${f.cliente_id}`}
-                        </Link>
-                        {f.tipo_facturacion === "termino_medio" && (
-                          <span
-                            className="text-xs bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5"
-                            title="Facturado por consumo promedio (no se pudo leer el medidor)"
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-bg text-muted text-xs uppercase">
+                <tr>
+                  <th className="text-left px-4 py-2">Cliente</th>
+                  <th className="text-left px-4 py-2">Emisión</th>
+                  <th className="text-left px-4 py-2">Vencimiento</th>
+                  <th className="text-right px-4 py-2">Arrastre</th>
+                  <th className="text-right px-4 py-2">Total</th>
+                  <th className="text-left px-4 py-2">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {facturas.map((f) => {
+                  const tieneArrastre =
+                    f.saldo_anterior > 0 || f.interes_mora > 0;
+                  return (
+                    <tr key={f.id} className="border-t border-border">
+                      <td className="px-4 py-2 text-text">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to={`/facturas/${f.id}`}
+                            className="hover:text-primary hover:underline"
                           >
-                            Término medio
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2 text-muted">{f.fecha_emision}</td>
-                    <td className="px-4 py-2">
-                      {corteEnTramite(f) ? (
-                        <span className="text-xs font-semibold text-danger">
-                          Corte en Trámite
-                        </span>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted">
-                            {f.fecha_vencimiento}
-                          </span>
-                          {f.mensaje_boleta && (
-                            <span title={f.mensaje_boleta}>
-                              <AlertTriangle
-                                size={14}
-                                className="text-amber-500"
-                              />
+                            {f.nombre_cliente ?? `#${f.cliente_id}`}
+                          </Link>
+                          {f.tipo_facturacion === "termino_medio" && (
+                            <span
+                              className="text-xs bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5"
+                              title="Facturado por consumo promedio (no se pudo leer el medidor)"
+                            >
+                              Término medio
                             </span>
                           )}
                         </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      {tieneArrastre ? (
+                      </td>
+                      <td className="px-4 py-2 text-muted">
+                        {f.fecha_emision}
+                      </td>
+                      <td className="px-4 py-2">
+                        {corteEnTramite(f) ? (
+                          <span className="text-xs font-semibold text-danger">
+                            Corte en Trámite
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted">
+                              {f.fecha_vencimiento}
+                            </span>
+                            {f.mensaje_boleta && (
+                              <span title={f.mensaje_boleta}>
+                                <AlertTriangle
+                                  size={14}
+                                  className="text-amber-500"
+                                />
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        {tieneArrastre ? (
+                          <span
+                            className="text-xs text-danger"
+                            title={`Saldo anterior: ${formatearMonto(f.saldo_anterior)} · Interés por mora: ${formatearMonto(f.interes_mora)}`}
+                          >
+                            {formatearMonto(f.saldo_anterior + f.interes_mora)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-right font-medium text-text">
+                        {formatearMonto(f.total_a_pagar)}
+                      </td>
+                      <td className="px-4 py-2">
                         <span
-                          className="text-xs text-danger"
-                          title={`Saldo anterior: ${formatearMonto(f.saldo_anterior)} · Interés por mora: ${formatearMonto(f.interes_mora)}`}
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${ESTADO_STYLES[f.estado]}`}
                         >
-                          {formatearMonto(f.saldo_anterior + f.interes_mora)}
+                          {f.estado}
                         </span>
-                      ) : (
-                        <span className="text-xs text-muted">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-right font-medium text-text">
-                      {formatearMonto(f.total_a_pagar)}
-                    </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${ESTADO_STYLES[f.estado]}`}
-                      >
-                        {f.estado}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

@@ -19,6 +19,7 @@ class Factura(Base):
     __tablename__ = "facturas"
 
     id = Column(Integer, primary_key=True, index=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
     cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
     periodo = Column(String, nullable=False)  # ej. "2026-08"
     tipo_facturacion = Column(String, nullable=False, default="normal")
@@ -67,6 +68,7 @@ class Factura(Base):
     creado_en = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     cliente = relationship("Cliente")
+    empresa = relationship("Empresa")
 
     __table_args__ = (
         UniqueConstraint("cliente_id", "periodo", name="uq_factura_cliente_periodo"),

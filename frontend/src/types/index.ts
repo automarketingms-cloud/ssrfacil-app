@@ -215,6 +215,7 @@ export interface PagoCreate {
   monto: number;
   fecha_pago: string;
   metodo_pago: string;
+  referencia?: string;
   observaciones?: string;
 }
 
@@ -224,6 +225,7 @@ export interface Pago {
   monto: number;
   fecha_pago: string;
   metodo_pago: string;
+  referencia: string | null;
   observaciones: string | null;
   creado_en: string;
 }
@@ -235,6 +237,21 @@ export interface HistorialPago {
   monto: number;
   fecha_pago: string;
   metodo_pago: string;
+  referencia: string | null;
+  observaciones: string | null;
+}
+
+export interface PagoDelDia {
+  pago_id: number;
+  factura_id: number;
+  periodo: string;
+  cliente_nombre: string;
+  cajero_nombre: string;
+  cajero_id: number; // NUEVO
+  monto: number;
+  fecha_pago: string;
+  metodo_pago: string;
+  referencia: string | null;
   observaciones: string | null;
 }
 
@@ -252,6 +269,9 @@ export interface Configuracion {
   tasa_interes_mora: number;
   tasa_iva: number;
   numero_medidor_matriz: string;
+  comuna: string | null;
+  actividad_economica: number[] | null;
+  certificado_pfx_path: string | null;
 }
 
 export interface ConfiguracionUpdate {
@@ -267,6 +287,8 @@ export interface ConfiguracionUpdate {
   tasa_interes_mora?: number;
   tasa_iva?: number;
   numero_medidor_matriz?: string;
+  comuna?: string | null;
+  actividad_economica?: number[] | null;
 }
 
 export interface LecturaMatriz {
@@ -348,6 +370,7 @@ export interface ResumenDashboard {
   medidores_sin_lectura: number;
   reclamos_abiertos: number;
   reclamos_fuera_de_plazo: number;
+  reclamos_con_medicion_pendiente: number;
   cortes_activos: number;
   monto_pendiente_cobro: number;
   clientes_morosos: number;
@@ -399,6 +422,12 @@ export interface ReporteContinuidad {
   cortes_cerrados: CorteResponse[];
 }
 
+export interface MedicionPresionResumen {
+  fecha_medicion: string;
+  presion_mca: number;
+  cumple: boolean;
+}
+
 export interface DetalleReclamoReporte {
   folio: string;
   tipo_reclamo: string;
@@ -409,6 +438,7 @@ export interface DetalleReclamoReporte {
   fecha_respuesta: string | null;
   dias_habiles_respuesta: number | null;
   fuera_de_plazo: boolean | null;
+  mediciones_presion: MedicionPresionResumen[];
 }
 
 export interface ReporteReclamos {
@@ -487,4 +517,121 @@ export interface EmpresaCreateData {
   admin_nombre: string;
   admin_email: string;
   admin_password: string;
+}
+
+export interface ClienteSubsidio {
+  id: number;
+  nombre: string;
+  rut: string;
+  numero_medidor: string;
+  direccion: string | null;
+  activo: boolean;
+  es_socio: boolean;
+  porcentaje_subsidio: number;
+}
+
+export interface CajaAperturaCreate {
+  monto_inicial: number;
+}
+
+export interface CajaCierreCreate {
+  observaciones_cierre?: string;
+}
+
+export interface CajaArqueoCreate {
+  observaciones_arqueo?: string;
+}
+
+export interface Caja {
+  id: number;
+  cajero_id: number;
+  fecha_apertura: string;
+  monto_inicial: number;
+  fecha_cierre: string | null;
+  monto_efectivo_esperado: number | null;
+  observaciones_cierre: string | null;
+  estado: string;
+  fecha_arqueo: string | null;
+  arqueado_por_id: number | null;
+  observaciones_arqueo: string | null;
+}
+
+export interface CajaConCajero extends Caja {
+  cajero_nombre: string;
+}
+
+export interface ResumenPorMetodo {
+  metodo_pago: string;
+  cantidad: number;
+  total: number;
+}
+
+export interface CajaResumen {
+  caja: Caja;
+  resumen_por_metodo: ResumenPorMetodo[];
+  total_general: number;
+}
+
+export interface DetallePagoArqueo {
+  pago_id: number;
+  hora: string;
+  cliente_nombre: string;
+  cliente_rut: string;
+  periodo: string;
+  metodo_pago: string;
+  referencia: string | null;
+  monto: number;
+}
+
+export interface DetalleCaja {
+  caja: Caja;
+  pagos: DetallePagoArqueo[];
+  resumen_por_metodo: ResumenPorMetodo[];
+  total_general: number;
+}
+
+export interface PagoReporte {
+  pago_id: number;
+  fecha_pago: string;
+  cliente_nombre: string;
+  cliente_rut: string;
+  periodo: string;
+  cajero_id: number;
+  cajero_nombre: string;
+  caja_id: number;
+  metodo_pago: string;
+  referencia: string | null;
+  monto: number;
+}
+
+export interface ResumenMetodoPago {
+  metodo_pago: string;
+  cantidad: number;
+  total: number;
+}
+
+export interface ReportePagos {
+  desde: string;
+  hasta: string;
+  cajero_id: number | null;
+  pagos: PagoReporte[];
+  resumen_por_metodo: ResumenMetodoPago[];
+  total_general: number;
+}
+
+export interface CafSii {
+  id: number;
+  tipo_dte: string;
+  folio_desde: number;
+  folio_hasta: number;
+  folio_actual: number;
+  folios_restantes: number;
+  activo: boolean;
+  fecha_vencimiento: string | null;
+}
+
+export interface AlertaFolio {
+  id: number;
+  tipo_dte: string;
+  folios_restantes: number;
 }

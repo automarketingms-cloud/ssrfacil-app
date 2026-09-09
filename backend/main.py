@@ -2,11 +2,12 @@ from fastapi import FastAPI
 from app.core.database import engine, Base
 from app.api import (
     clientes, lecturas, tarifas, consumos, reportes, presion,
-    continuidad, reclamos, dashboard, pago, configuracion,
-    lectura_matriz, facturas, empresas, auth, usuarios,
+    continuidad, reclamos, dashboard, configuracion,
+    lectura_matriz, facturas, empresas, auth, usuarios, cajas, pagos, caf
 )
 
 from fastapi.middleware.cors import CORSMiddleware
+
 
 Base.metadata.create_all(bind=engine)
 
@@ -34,9 +35,11 @@ app.include_router(continuidad.router)
 app.include_router(reclamos.router)
 app.include_router(dashboard.router)
 app.include_router(facturas.router)
-app.include_router(pago.router)
+app.include_router(pagos.router)
 app.include_router(configuracion.router)
 app.include_router(lectura_matriz.router)
+app.include_router(cajas.router)
+app.include_router(caf.router)
 
 @app.get("/")
 def read_root():

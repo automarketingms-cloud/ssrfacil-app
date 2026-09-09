@@ -5,6 +5,7 @@ class FacturaResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    empresa_id: int
     cliente_id: int
     nombre_cliente: str | None = None
     periodo: str
@@ -23,7 +24,6 @@ class FacturaResponse(BaseModel):
     cargo_fondo_reposicion: float
     subsidio_aplicado: float
     porcentaje_subsidio_aplicado: float | None = None
-    iva: float
     iva: float
     saldo_anterior: float
     interes_mora: float

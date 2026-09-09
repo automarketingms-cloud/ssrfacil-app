@@ -1,8 +1,8 @@
 import { useState } from "react";
 import {
   obtenerReporteContinuidad,
-  urlReporteContinuidadExcel,
-  urlReporteContinuidadPdf,
+  descargarReporteContinuidadExcel,
+  descargarReporteContinuidadPdf,
 } from "../api/reportes";
 import type { ReporteContinuidad as ReporteContinuidadType } from "../types";
 
@@ -30,6 +30,16 @@ export default function ReporteContinuidad() {
     }
   };
 
+  const manejarDescarga = async (fn: () => Promise<void>) => {
+    try {
+      await fn();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Error al descargar el reporte",
+      );
+    }
+  };
+
   return (
     <div className="max-w-5xl space-y-6">
       <div>
@@ -41,7 +51,7 @@ export default function ReporteContinuidad() {
           fiscalización SISS.
         </p>
 
-        <div className="flex items-end gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
           <div>
             <label className="block text-sm text-muted mb-1">Periodo</label>
             <input
@@ -76,19 +86,27 @@ export default function ReporteContinuidad() {
                 Resumen — {reporte.periodo}
               </h2>
               <div className="flex gap-2">
-                <a
-                  href={urlReporteContinuidadExcel(reporte.periodo)}
+                <button
+                  onClick={() =>
+                    manejarDescarga(() =>
+                      descargarReporteContinuidadExcel(reporte.periodo),
+                    )
+                  }
                   className="text-sm bg-gray-100 hover:bg-gray-200 text-text px-3 py-1.5 rounded-lg"
                 >
                   Descargar Excel
-                </a>
+                </button>
 
-                <a
-                  href={urlReporteContinuidadPdf(reporte.periodo)}
+                <button
+                  onClick={() =>
+                    manejarDescarga(() =>
+                      descargarReporteContinuidadPdf(reporte.periodo),
+                    )
+                  }
                   className="text-sm bg-gray-100 hover:bg-gray-200 text-text px-3 py-1.5 rounded-lg"
                 >
                   Descargar PDF
-                </a>
+                </button>
               </div>
             </div>
 

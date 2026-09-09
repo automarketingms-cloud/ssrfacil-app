@@ -182,7 +182,7 @@ export default function GestionUsuarios() {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold text-navy">Usuarios</h1>
         <button
           onClick={() => setMostrarForm(!mostrarForm)}
@@ -229,7 +229,7 @@ export default function GestionUsuarios() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nombre
@@ -341,7 +341,7 @@ export default function GestionUsuarios() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nombre
@@ -427,53 +427,55 @@ export default function GestionUsuarios() {
       )}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-left text-gray-600">
-            <tr>
-              <th className="px-4 py-3">Nombre</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Rol</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {usuarios.map((u) => (
-              <tr key={u.id}>
-                <td className="px-4 py-3">{u.nombre}</td>
-                <td className="px-4 py-3">{u.email}</td>
-                <td className="px-4 py-3 capitalize">{u.rol}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      u.activo
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {u.activo ? "Activo" : "Inactivo"}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right space-x-3">
-                  <button
-                    onClick={() => abrirEdicion(u)}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Editar
-                  </button>
-                  {u.id !== usuarioActual?.id && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-left text-gray-600">
+              <tr>
+                <th className="px-4 py-3">Nombre</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Rol</th>
+                <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {usuarios.map((u) => (
+                <tr key={u.id}>
+                  <td className="px-4 py-3">{u.nombre}</td>
+                  <td className="px-4 py-3">{u.email}</td>
+                  <td className="px-4 py-3 capitalize">{u.rol}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        u.activo
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {u.activo ? "Activo" : "Inactivo"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right space-x-3">
                     <button
-                      onClick={() => toggleActivo(u)}
+                      onClick={() => abrirEdicion(u)}
                       className="text-sm text-primary hover:underline"
                     >
-                      {u.activo ? "Desactivar" : "Activar"}
+                      Editar
                     </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    {u.id !== usuarioActual?.id && (
+                      <button
+                        onClick={() => toggleActivo(u)}
+                        className="text-sm text-primary hover:underline"
+                      >
+                        {u.activo ? "Desactivar" : "Activar"}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

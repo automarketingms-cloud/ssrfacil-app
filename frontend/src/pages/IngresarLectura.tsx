@@ -150,10 +150,10 @@ export default function IngresarLectura() {
         <Input
           label="Período"
           name="periodo"
+          type="month"
           value={form.periodo}
           onChange={handleChange}
           required
-          placeholder="2026-07"
         />
 
         <Input
@@ -202,7 +202,7 @@ export default function IngresarLectura() {
           </div>
         )}
 
-        <div className="flex gap-3 mt-2">
+        <div className="flex flex-col sm:flex-row gap-3 mt-2">
           <button
             type="submit"
             disabled={loading || loadingClientes || loadingTerminoMedio}

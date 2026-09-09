@@ -1,14 +1,15 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Date, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Date, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
-from app.core.database import Base  # ajusta el import según cómo lo tengas en tu proyecto
+from app.core.database import Base
 
 
 class Reclamo(Base):
     __tablename__ = "reclamos"
 
     id = Column(Integer, primary_key=True, index=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
 
-    folio = Column(String, unique=True, index=True, nullable=False)  # ej "2026-001"
+    folio = Column(String, index=True, nullable=False)  # ej "2026-001", único por empresa
     anio = Column(Integer, nullable=False)
 
     cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=True)
@@ -34,3 +35,7 @@ class Reclamo(Base):
     observaciones = Column(Text, nullable=True)
 
     cliente = relationship("Cliente")
+
+    __table_args__ = (
+        UniqueConstraint("empresa_id", "folio", name="uq_reclamos_empresa_folio"),
+    )

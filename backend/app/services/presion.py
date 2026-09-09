@@ -48,19 +48,20 @@ def serializar_medicion(m: MedicionPresion) -> dict:
         "presion_mca": float(m.presion_mca),
         "observaciones": m.observaciones,
         "reclamo_id": m.reclamo_id,
+        "cliente_id": m.cliente_id,
         **evaluacion,
     }
 
-def obtener_mediciones(desde: Optional[date], hasta: Optional[date], db: Session):
-    query = db.query(MedicionPresion)
+def obtener_mediciones(desde: Optional[date], hasta: Optional[date], db: Session, empresa_id: int):
+    query = db.query(MedicionPresion).filter(MedicionPresion.empresa_id == empresa_id)
     if desde:
         query = query.filter(MedicionPresion.fecha_medicion >= desde)
     if hasta:
         query = query.filter(MedicionPresion.fecha_medicion <= hasta)
     return query.order_by(MedicionPresion.fecha_medicion.desc()).all()
 
-def construir_excel_reporte_presion(desde: Optional[date], hasta: Optional[date], db: Session) -> BytesIO:
-    mediciones = obtener_mediciones(desde, hasta, db)
+def construir_excel_reporte_presion(desde: Optional[date], hasta: Optional[date], db: Session, empresa_id: int) -> BytesIO:
+    mediciones = obtener_mediciones(desde, hasta, db, empresa_id)
     datos = [serializar_medicion(m) for m in mediciones]
 
     wb = Workbook()
@@ -104,8 +105,8 @@ def construir_excel_reporte_presion(desde: Optional[date], hasta: Optional[date]
     return buffer
 
 
-def construir_pdf_reporte_presion(desde: Optional[date], hasta: Optional[date], db: Session) -> BytesIO:
-    mediciones = obtener_mediciones(desde, hasta, db)
+def construir_pdf_reporte_presion(desde: Optional[date], hasta: Optional[date], db: Session, empresa_id: int) -> BytesIO:
+    mediciones = obtener_mediciones(desde, hasta, db, empresa_id)
     datos = [serializar_medicion(m) for m in mediciones]
     styles = getSampleStyleSheet()
 

@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Download, ArrowLeft, AlertTriangle } from "lucide-react";
-import { obtenerFactura, urlFacturaPdf } from "../api/facturas";
+import { Download, ArrowLeft, AlertTriangle, Send } from "lucide-react";
+import {
+  obtenerFactura,
+  descargarFacturaPdf,
+  enviarFacturaSii,
+} from "../api/facturas";
 import type { Factura } from "../types";
 
 function formatearMonto(valor: number): string {
@@ -25,8 +29,17 @@ export default function DetalleFactura() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [enviandoSii, setEnviandoSii] = useState(false);
+  const [errorSii, setErrorSii] = useState<string | null>(null);
+
   useEffect(() => {
     if (!id) return;
+    cargarFactura();
+  }, [id]);
+
+  function cargarFactura() {
+    if (!id) return;
+    setLoading(true);
     obtenerFactura(Number(id))
       .then(setFactura)
       .catch((err) =>
@@ -35,7 +48,23 @@ export default function DetalleFactura() {
         ),
       )
       .finally(() => setLoading(false));
-  }, [id]);
+  }
+
+  async function handleEnviarSii() {
+    if (!id) return;
+    setErrorSii(null);
+    try {
+      setEnviandoSii(true);
+      await enviarFacturaSii(Number(id));
+      cargarFactura();
+    } catch (err) {
+      setErrorSii(
+        err instanceof Error ? err.message : "Error al enviar al SII",
+      );
+    } finally {
+      setEnviandoSii(false);
+    }
+  }
 
   if (loading)
     return <p className="text-sm text-muted p-4">Cargando factura...</p>;
@@ -56,6 +85,8 @@ export default function DetalleFactura() {
     f.subsidio_aplicado +
     f.iva;
 
+  const yaEnviada = f.estado_envio_sii === "enviado";
+
   return (
     <div>
       <Link
@@ -65,7 +96,7 @@ export default function DetalleFactura() {
         <ArrowLeft size={14} /> Volver a Facturación
       </Link>
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
         <div>
           <h1 className="text-xl font-semibold text-text">
             Boleta N° {f.id} — {f.periodo}
@@ -75,17 +106,32 @@ export default function DetalleFactura() {
           </p>
         </div>
 
-        <a
-          href={urlFacturaPdf(f.id)}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-2 bg-primary text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors"
-        >
-          <Download size={16} /> Descargar PDF
-        </a>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleEnviarSii}
+            disabled={enviandoSii || yaEnviada}
+            className="flex items-center gap-2 bg-primary text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors cursor-pointer"
+          >
+            <Send size={16} />
+            {yaEnviada
+              ? `Enviada (folio ${f.folio_sii})`
+              : enviandoSii
+                ? "Enviando..."
+                : "Enviar a SII"}
+          </button>
+
+          <button
+            onClick={() => descargarFacturaPdf(f.id)}
+            className="flex items-center gap-2 bg-primary text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors cursor-pointer"
+          >
+            <Download size={16} /> Descargar PDF
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      {errorSii && <p className="text-sm text-danger mb-4">{errorSii}</p>}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 mt-4">
         <div className="bg-surface border border-border rounded-xl p-4">
           <p className="text-xs text-muted mb-1">Fecha de emisión</p>
           <p className="text-sm text-text">{f.fecha_emision}</p>
@@ -96,7 +142,7 @@ export default function DetalleFactura() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Detalle de consumo en m3 */}
         <div className="bg-surface border border-border rounded-xl p-4">
           <h2 className="text-sm font-semibold text-text mb-3">
@@ -110,30 +156,32 @@ export default function DetalleFactura() {
             </p>
           </div>
           {f.detalle_tramos && f.detalle_tramos.length > 0 && (
-            <table className="w-full text-xs">
-              <thead className="bg-bg text-muted uppercase">
-                <tr>
-                  <th className="text-left px-2 py-1">Tramo</th>
-                  <th className="text-right px-2 py-1">M3</th>
-                  <th className="text-right px-2 py-1">Valor</th>
-                  <th className="text-right px-2 py-1">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {f.detalle_tramos.map((t) => (
-                  <tr key={t.numero_tramo} className="border-t border-border">
-                    <td className="px-2 py-1">{t.numero_tramo}</td>
-                    <td className="px-2 py-1 text-right">{t.m3_en_tramo}</td>
-                    <td className="px-2 py-1 text-right">
-                      {formatearMonto(t.precio_m3)}
-                    </td>
-                    <td className="px-2 py-1 text-right">
-                      {formatearMonto(t.subtotal)}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-bg text-muted uppercase">
+                  <tr>
+                    <th className="text-left px-2 py-1">Tramo</th>
+                    <th className="text-right px-2 py-1">M3</th>
+                    <th className="text-right px-2 py-1">Valor</th>
+                    <th className="text-right px-2 py-1">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {f.detalle_tramos.map((t) => (
+                    <tr key={t.numero_tramo} className="border-t border-border">
+                      <td className="px-2 py-1">{t.numero_tramo}</td>
+                      <td className="px-2 py-1 text-right">{t.m3_en_tramo}</td>
+                      <td className="px-2 py-1 text-right">
+                        {formatearMonto(t.precio_m3)}
+                      </td>
+                      <td className="px-2 py-1 text-right">
+                        {formatearMonto(t.subtotal)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
@@ -197,7 +245,7 @@ export default function DetalleFactura() {
         </div>
       </div>
 
-      <div className="bg-primary text-white rounded-xl p-4 mt-4 flex items-center justify-between">
+      <div className="bg-primary text-white rounded-xl p-4 mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <p className="text-xs opacity-80">Total a pagar</p>
           <p className="text-2xl font-semibold">

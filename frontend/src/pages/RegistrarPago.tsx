@@ -1,12 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DollarSign, Loader2 } from "lucide-react";
 import { listarClientes } from "../api/clientes";
+import { useAuth } from "../context/AuthContext";
 import {
   obtenerFacturasPendientes,
   registrarPago,
   obtenerHistorialPagos,
+  obtenerPagosDelDia,
 } from "../api/pagos";
-import type { Cliente, FacturaPendiente } from "../types";
+import type {
+  Cliente,
+  FacturaPendiente,
+  HistorialPago,
+  PagoDelDia,
+} from "../types";
 
 function formatearMonto(valor: number): string {
   return valor.toLocaleString("es-CL", {
@@ -18,6 +25,25 @@ function formatearMonto(valor: number): string {
 
 function hoyISO(): string {
   return new Date().toISOString().split("T")[0];
+}
+
+// Redondeo a la unidad de peso (CLP no tiene decimales) — mismo criterio
+// que usa el label "Saldo pendiente" en pantalla.
+function redondearAPeso(monto: number): number {
+  return Math.round(monto);
+}
+
+// Ley N° 20.956 (Regla del Redondeo): solo aplica a pagos en efectivo,
+// y se aplica sobre el monto ya redondeado a peso. Terminaciones 1-5
+// bajan a la decena inferior, 6-9 suben a la superior.
+function redondearSegunLey(monto: number, metodoPago: string): number {
+  const enteroPeso = redondearAPeso(monto);
+  if (metodoPago !== "efectivo") {
+    return enteroPeso;
+  }
+  const resto = enteroPeso % 10;
+  if (resto === 0) return enteroPeso;
+  return resto <= 5 ? enteroPeso - resto : enteroPeso + (10 - resto);
 }
 
 const ESTADO_STYLES: Record<string, string> = {
@@ -39,13 +65,48 @@ export default function RegistrarPago() {
   const [fechaPago, setFechaPago] = useState(hoyISO());
   const [metodoPago, setMetodoPago] = useState("efectivo");
   const [observaciones, setObservaciones] = useState("");
+  const [referencia, setReferencia] = useState("");
+
+  const requiereReferencia = [
+    "tarjeta_debito",
+    "tarjeta_credito",
+    "transferencia",
+  ].includes(metodoPago);
+  const labelReferencia =
+    metodoPago === "transferencia" ? "N° de transacción" : "N° de voucher";
 
   const [loadingFacturas, setLoadingFacturas] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
+  const [pagosDelDia, setPagosDelDia] = useState<PagoDelDia[]>([]);
+  const [loadingPagosDelDia, setLoadingPagosDelDia] = useState(false);
 
   const [historial, setHistorial] = useState<HistorialPago[]>([]);
+
+  const { usuario } = useAuth();
+  const [filtroCajero, setFiltroCajero] = useState<"todos" | "mios">("todos");
+
+  // Máximo permitido para el monto según el método de pago actual.
+  const montoMaximo = facturaSeleccionada
+    ? redondearSegunLey(facturaSeleccionada.saldo, metodoPago)
+    : 0;
+
+  async function cargarPagosDelDia() {
+    setLoadingPagosDelDia(true);
+    try {
+      const data = await obtenerPagosDelDia();
+      setPagosDelDia(data);
+    } catch {
+      // no bloqueamos la página si falla esto
+    } finally {
+      setLoadingPagosDelDia(false);
+    }
+  }
+
+  useEffect(() => {
+    cargarPagosDelDia();
+  }, []);
 
   async function handleBuscar(valor: string) {
     setBusqueda(valor);
@@ -88,9 +149,28 @@ export default function RegistrarPago() {
 
   function handleSeleccionarFactura(factura: FacturaPendiente) {
     setFacturaSeleccionada(factura);
-    setMonto(String(factura.saldo));
+    setMonto(String(redondearSegunLey(factura.saldo, metodoPago)));
     setExito(null);
     setError(null);
+  }
+
+  function handleCambiarMetodoPago(nuevoMetodo: string) {
+    setMetodoPago(nuevoMetodo);
+    setReferencia("");
+    // Si el monto actual coincidía con el máximo anterior (pago total),
+    // lo recalculamos para el nuevo método; si el usuario ya editó un
+    // monto parcial, lo dejamos como está.
+    if (facturaSeleccionada) {
+      const maximoAnterior = redondearSegunLey(
+        facturaSeleccionada.saldo,
+        metodoPago,
+      );
+      if (Number(monto) === maximoAnterior) {
+        setMonto(
+          String(redondearSegunLey(facturaSeleccionada.saldo, nuevoMetodo)),
+        );
+      }
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -105,6 +185,7 @@ export default function RegistrarPago() {
         monto: Number(monto),
         fecha_pago: fechaPago,
         metodo_pago: metodoPago,
+        referencia: requiereReferencia ? referencia : undefined,
         observaciones: observaciones || undefined,
       });
       setExito(
@@ -118,6 +199,8 @@ export default function RegistrarPago() {
       setFacturaSeleccionada(null);
       setMonto("");
       setObservaciones("");
+      setReferencia("");
+      cargarPagosDelDia();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error al registrar el pago",
@@ -172,7 +255,7 @@ export default function RegistrarPago() {
       )}
 
       {clienteSeleccionado && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Boletas pendientes */}
           <div className="bg-surface border border-border rounded-xl p-4">
             <h2 className="text-sm font-semibold text-text mb-3">
@@ -230,15 +313,23 @@ export default function RegistrarPago() {
               <p className="text-xs text-muted">
                 Saldo pendiente: {formatearMonto(facturaSeleccionada.saldo)}
               </p>
+              {metodoPago === "efectivo" && (
+                <p className="text-xs text-muted -mt-2">
+                  Monto en efectivo redondeado a la decena según Ley N° 20.956:{" "}
+                  <span className="font-medium text-text">
+                    {formatearMonto(montoMaximo)}
+                  </span>
+                </p>
+              )}
 
               <label className="text-xs text-muted">Monto a pagar</label>
               <input
                 type="number"
                 value={monto}
                 onChange={(e) => setMonto(e.target.value)}
-                max={facturaSeleccionada.saldo}
-                min={1}
-                step="1"
+                max={montoMaximo}
+                min={metodoPago === "efectivo" ? 0 : 1}
+                step={metodoPago === "efectivo" ? 10 : 1}
                 required
                 className="border border-border rounded-lg px-3 py-2 text-sm bg-surface"
               />
@@ -255,13 +346,29 @@ export default function RegistrarPago() {
               <label className="text-xs text-muted">Método de pago</label>
               <select
                 value={metodoPago}
-                onChange={(e) => setMetodoPago(e.target.value)}
+                onChange={(e) => handleCambiarMetodoPago(e.target.value)}
                 className="border border-border rounded-lg px-3 py-2 text-sm bg-surface"
               >
                 <option value="efectivo">Efectivo</option>
+                <option value="tarjeta_debito">Tarjeta débito</option>
+                <option value="tarjeta_credito">Tarjeta crédito</option>
                 <option value="transferencia">Transferencia</option>
-                <option value="otro">Otro</option>
               </select>
+
+              {requiereReferencia && (
+                <>
+                  <label className="text-xs text-muted">
+                    {labelReferencia}
+                  </label>
+                  <input
+                    type="text"
+                    value={referencia}
+                    onChange={(e) => setReferencia(e.target.value)}
+                    required
+                    className="border border-border rounded-lg px-3 py-2 text-sm bg-surface"
+                  />
+                </>
+              )}
 
               <label className="text-xs text-muted">
                 Observaciones (opcional)
@@ -312,13 +419,95 @@ export default function RegistrarPago() {
                     </div>
                     <div className="flex items-center justify-between mt-1 text-xs text-muted">
                       <span>{h.fecha_pago}</span>
-                      <span className="capitalize">{h.metodo_pago}</span>
+                      <span className="capitalize">
+                        {h.metodo_pago.replace("_", " ")}
+                        {h.referencia ? ` · ${h.referencia}` : ""}
+                      </span>
                     </div>
                   </li>
                 ))}
               </ul>
             )}
           </div>
+        </div>
+      )}
+
+      {!clienteSeleccionado && (
+        <div className="bg-surface border border-border rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-text">Pagos de hoy</h2>
+            <div className="flex text-xs rounded-lg border border-border overflow-hidden">
+              <button
+                onClick={() => setFiltroCajero("todos")}
+                className={`px-3 py-1 font-medium transition-colors ${
+                  filtroCajero === "todos"
+                    ? "bg-primary text-white"
+                    : "bg-surface text-muted hover:bg-bg"
+                }`}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => setFiltroCajero("mios")}
+                className={`px-3 py-1 font-medium transition-colors ${
+                  filtroCajero === "mios"
+                    ? "bg-primary text-white"
+                    : "bg-surface text-muted hover:bg-bg"
+                }`}
+              >
+                Solo míos
+              </button>
+            </div>
+          </div>
+          {loadingPagosDelDia ? (
+            <p className="text-sm text-muted">Cargando...</p>
+          ) : (
+            (() => {
+              const pagosFiltrados =
+                filtroCajero === "mios"
+                  ? pagosDelDia.filter((p) => p.cajero_id === usuario?.id)
+                  : pagosDelDia;
+
+              if (pagosFiltrados.length === 0) {
+                return (
+                  <p className="text-sm text-muted">
+                    {filtroCajero === "mios"
+                      ? "Aún no has registrado pagos hoy."
+                      : "Aún no se han registrado pagos hoy."}
+                  </p>
+                );
+              }
+
+              return (
+                <ul className="flex flex-col gap-2">
+                  {pagosFiltrados.map((p) => (
+                    <li
+                      key={p.pago_id}
+                      className="border border-border rounded-lg px-3 py-2"
+                    >
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-text">
+                          {p.cliente_nombre}
+                        </span>
+                        <span className="font-semibold text-text">
+                          {formatearMonto(p.monto)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mt-1 text-xs text-muted">
+                        <span>
+                          Período {p.periodo} · Cajero: {p.cajero_nombre}
+                        </span>
+                        <span className="capitalize">
+                          {p.metodo_pago.replace("_", " ")}
+                          {p.referencia ? ` · ${p.referencia}` : ""}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              );
+            })()
+          )}
         </div>
       )}
     </div>

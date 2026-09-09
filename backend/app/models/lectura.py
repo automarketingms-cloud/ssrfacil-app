@@ -6,6 +6,7 @@ class Lectura(Base):
     __tablename__ = "lecturas"
 
     id = Column(Integer, primary_key=True, index=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
     cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
     fecha_lectura = Column(Date, nullable=False)
     periodo = Column(String, nullable=False)  # formato "2026-07" (año-mes)

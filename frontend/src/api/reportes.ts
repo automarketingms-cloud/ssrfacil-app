@@ -1,85 +1,156 @@
+import { apiFetch } from "./http";
 import type {
   ReporteFacturacionResponse,
   ReporteContinuidad,
   ReporteReclamos,
+  ClienteSubsidio,
+  ReportePagos,
 } from "../types";
-
-const API_URL = import.meta.env.VITE_API_URL;
 
 export async function obtenerReporteFacturacion(
   periodo: string,
 ): Promise<ReporteFacturacionResponse> {
-  const res = await fetch(`${API_URL}/reportes/facturacion/${periodo}`);
-  if (!res.ok) {
-    const error = await res.json().catch(() => null);
-    throw new Error(
-      error?.detail || "Error al obtener el reporte de facturación",
-    );
-  }
-  return res.json();
+  return apiFetch<ReporteFacturacionResponse>(
+    `/reportes/facturacion/${periodo}`,
+  );
 }
 
-export function urlDescargaExcel(periodo: string): string {
-  return `${API_URL}/reportes/facturacion/${periodo}/excel`;
+async function descargarBlob(path: string, filename: string): Promise<void> {
+  const blob = await apiFetch<Blob>(path, { responseType: "blob" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
-export function urlDescargaPdf(periodo: string): string {
-  return `${API_URL}/reportes/facturacion/${periodo}/pdf`;
+export function descargarReporteFacturacionExcel(
+  periodo: string,
+): Promise<void> {
+  return descargarBlob(
+    `/reportes/facturacion/${periodo}/excel`,
+    `reporte_facturacion_${periodo}.xlsx`,
+  );
 }
 
-export function urlDescargaExcelPresion(
+export function descargarReporteFacturacionPdf(periodo: string): Promise<void> {
+  return descargarBlob(
+    `/reportes/facturacion/${periodo}/pdf`,
+    `reporte_facturacion_${periodo}.pdf`,
+  );
+}
+
+export function descargarReportePresionExcel(
   desde?: string,
   hasta?: string,
-): string {
+): Promise<void> {
   const params = new URLSearchParams();
   if (desde) params.set("desde", desde);
   if (hasta) params.set("hasta", hasta);
-  return `${API_URL}/reportes/presion/excel?${params.toString()}`;
+  return descargarBlob(
+    `/reportes/presion/excel?${params.toString()}`,
+    "reporte_presion.xlsx",
+  );
 }
 
-export function urlDescargaPdfPresion(desde?: string, hasta?: string): string {
+export function descargarReportePresionPdf(
+  desde?: string,
+  hasta?: string,
+): Promise<void> {
   const params = new URLSearchParams();
   if (desde) params.set("desde", desde);
   if (hasta) params.set("hasta", hasta);
-  return `${API_URL}/reportes/presion/pdf?${params.toString()}`;
+  return descargarBlob(
+    `/reportes/presion/pdf?${params.toString()}`,
+    "reporte_presion.pdf",
+  );
 }
 
 export async function obtenerReporteContinuidad(
   periodo: string,
 ): Promise<ReporteContinuidad> {
-  const res = await fetch(`${API_URL}/reportes/continuidad/${periodo}`);
-  if (!res.ok) {
-    const error = await res.json().catch(() => null);
-    throw new Error(
-      error?.detail || "Error al obtener el reporte de continuidad",
-    );
-  }
-  return res.json();
+  return apiFetch<ReporteContinuidad>(`/reportes/continuidad/${periodo}`);
 }
 
-export function urlReporteContinuidadExcel(periodo: string): string {
-  return `${API_URL}/reportes/continuidad/${periodo}/excel`;
+export function descargarReporteContinuidadExcel(
+  periodo: string,
+): Promise<void> {
+  return descargarBlob(
+    `/reportes/continuidad/${periodo}/excel`,
+    `reporte_continuidad_${periodo}.xlsx`,
+  );
 }
 
-export function urlReporteContinuidadPdf(periodo: string): string {
-  return `${API_URL}/reportes/continuidad/${periodo}/pdf`;
+export function descargarReporteContinuidadPdf(periodo: string): Promise<void> {
+  return descargarBlob(
+    `/reportes/continuidad/${periodo}/pdf`,
+    `reporte_continuidad_${periodo}.pdf`,
+  );
 }
 
 export async function obtenerReporteReclamos(
   periodo: string,
 ): Promise<ReporteReclamos> {
-  const res = await fetch(`${API_URL}/reportes/reclamos/${periodo}`);
-  if (!res.ok) {
-    const error = await res.json().catch(() => null);
-    throw new Error(error?.detail || "Error al obtener el reporte de reclamos");
-  }
-  return res.json();
+  return apiFetch<ReporteReclamos>(`/reportes/reclamos/${periodo}`);
 }
 
-export function urlReporteReclamosExcel(periodo: string): string {
-  return `${API_URL}/reportes/reclamos/${periodo}/excel`;
+export function descargarReporteReclamosExcel(periodo: string): Promise<void> {
+  return descargarBlob(
+    `/reportes/reclamos/${periodo}/excel`,
+    `reporte_reclamos_${periodo}.xlsx`,
+  );
 }
 
-export function urlReporteReclamosPdf(periodo: string): string {
-  return `${API_URL}/reportes/reclamos/${periodo}/pdf`;
+export function descargarReporteReclamosPdf(periodo: string): Promise<void> {
+  return descargarBlob(
+    `/reportes/reclamos/${periodo}/pdf`,
+    `reporte_reclamos_${periodo}.pdf`,
+  );
+}
+
+export async function obtenerReporteClientesSubsidio(
+  soloActivos: boolean = true,
+): Promise<ClienteSubsidio[]> {
+  return apiFetch<ClienteSubsidio[]>(
+    `/reportes/clientes-subsidio?solo_activos=${soloActivos}`,
+  );
+}
+
+export async function descargarReporteClientesSubsidioExcel(
+  soloActivos: boolean = true,
+): Promise<void> {
+  const blob = await apiFetch<Blob>(
+    `/reportes/clientes-subsidio/excel?solo_activos=${soloActivos}`,
+    { responseType: "blob" },
+  );
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "reporte_clientes_subsidio.xlsx";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function obtenerReportePagos(
+  desde: string,
+  hasta: string,
+  cajeroId?: number,
+): Promise<ReportePagos> {
+  const params = new URLSearchParams({ desde, hasta });
+  if (cajeroId !== undefined) params.set("cajero_id", String(cajeroId));
+  return apiFetch<ReportePagos>(`/reportes/pagos?${params.toString()}`);
+}
+
+export function descargarReportePagosExcel(
+  desde: string,
+  hasta: string,
+  cajeroId?: number,
+): Promise<void> {
+  const params = new URLSearchParams({ desde, hasta });
+  if (cajeroId !== undefined) params.set("cajero_id", String(cajeroId));
+  return descargarBlob(
+    `/reportes/pagos/excel?${params.toString()}`,
+    `reporte_pagos_${desde}_${hasta}.xlsx`,
+  );
 }

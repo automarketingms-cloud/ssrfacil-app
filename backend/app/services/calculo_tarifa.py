@@ -83,18 +83,18 @@ def calcular_consumo_promedio(db: Session, cliente_id: int, periodo_actual: str)
     return promedio_truncado, len(consumos_recientes)
 
 
-def obtener_tarifa_vigente(db: Session, periodo: str) -> Tarifa:
+def obtener_tarifa_vigente(db: Session, periodo: str, empresa_id: int) -> Tarifa:
     """
-    Busca la tarifa vigente para un periodo dado (ej: "2026-07").
-    Toma la más reciente cuya fecha de vigencia sea <= al periodo.
+    Busca la tarifa vigente de una empresa para un periodo dado (ej:
+    "2026-07"). Toma la más reciente cuya fecha de vigencia sea <= al
+    periodo, dentro de esa empresa.
     """
     anio, mes = periodo.split("-")
-    from datetime import date
     fecha_periodo = date(int(anio), int(mes), 1)
 
     tarifa = (
         db.query(Tarifa)
-        .filter(Tarifa.vigente_desde <= fecha_periodo)
+        .filter(Tarifa.vigente_desde <= fecha_periodo, Tarifa.empresa_id == empresa_id)
         .order_by(Tarifa.vigente_desde.desc())
         .first()
     )

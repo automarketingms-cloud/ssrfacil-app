@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from datetime import date
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.deps import get_current_user, require_roles
+from app.models.usuario import Usuario, RolUsuario
 from app.schemas.lectura_matriz import LecturaMatrizCreate, LecturaMatrizResponse, LecturaMatrizUpdate
 from app.services import lectura_matriz as service
 from app.services.storage import subir_foto_medidor, obtener_url_firmada
@@ -20,6 +22,7 @@ async def crear_lectura_matriz(
     observaciones: str | None = Form(None),
     foto: UploadFile = File(...),
     db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
 ):
     if foto.content_type not in CONTENT_TYPES_PERMITIDOS:
         raise HTTPException(
@@ -41,49 +44,80 @@ async def crear_lectura_matriz(
         observaciones=observaciones,
     )
     try:
-        return service.crear_lectura_matriz(db, data, foto_ruta=foto_ruta)
+        return service.crear_lectura_matriz(db, data, foto_ruta=foto_ruta, empresa_id=current_user.empresa_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/", response_model=list[LecturaMatrizResponse])
-def listar_lecturas_matriz(db: Session = Depends(get_db)):
-    return service.listar_lecturas_matriz(db)
+def listar_lecturas_matriz(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    return service.listar_lecturas_matriz(db, current_user.empresa_id)
 
 
 @router.get("/comparativa-anual/{anio}")
-def comparativa_anual(anio: str, db: Session = Depends(get_db)):
-    return service.calcular_comparativa_anual(db, anio)
+def comparativa_anual(
+    anio: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    return service.calcular_comparativa_anual(db, anio, current_user.empresa_id)
 
 
 @router.get("/comparativa-total")
-def comparativa_total(db: Session = Depends(get_db)):
-    return service.calcular_comparativa_total(db)
+def comparativa_total(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    return service.calcular_comparativa_total(db, current_user.empresa_id)
 
 
 @router.get("/comparativa/{periodo}")
-def obtener_comparativa(periodo: str, db: Session = Depends(get_db)):
-    return service.calcular_comparativa_agua(db, periodo)
+def obtener_comparativa(
+    periodo: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    return service.calcular_comparativa_agua(db, periodo, current_user.empresa_id)
 
 
 @router.get("/comparativa-historica/")
-def obtener_comparativa_historica(meses: int = 6, db: Session = Depends(get_db)):
-    return service.calcular_comparativa_historica(db, meses)
+def obtener_comparativa_historica(
+    meses: int = 6,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    return service.calcular_comparativa_historica(db, current_user.empresa_id, meses)
 
 
 @router.patch("/{lectura_id}", response_model=LecturaMatrizResponse)
-def editar_lectura_matriz(lectura_id: int, data: LecturaMatrizUpdate, db: Session = Depends(get_db)):
+def editar_lectura_matriz(
+    lectura_id: int,
+    data: LecturaMatrizUpdate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
     try:
-        return service.actualizar_lectura_matriz(db, lectura_id, data)
+        return service.actualizar_lectura_matriz(db, lectura_id, data, current_user.empresa_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/{lectura_id}/foto")
-def obtener_foto_lectura_matriz(lectura_id: int, db: Session = Depends(get_db)):
+def obtener_foto_lectura_matriz(
+    lectura_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
     from app.models.lectura_matriz import LecturaMatriz
 
-    lectura = db.query(LecturaMatriz).filter(LecturaMatriz.id == lectura_id).first()
+    lectura = (
+        db.query(LecturaMatriz)
+        .filter(LecturaMatriz.id == lectura_id, LecturaMatriz.empresa_id == current_user.empresa_id)
+        .first()
+    )
     if not lectura:
         raise HTTPException(status_code=404, detail="Lectura matriz no encontrada")
     if not lectura.foto_ruta:

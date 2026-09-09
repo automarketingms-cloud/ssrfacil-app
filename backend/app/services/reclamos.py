@@ -5,7 +5,9 @@ import holidays
 
 from app.models.reclamo import Reclamo
 from app.models.cliente import Cliente 
+from app.models.presion import MedicionPresion
 from app.schemas.reclamo import ReclamoCreate, ReclamoResponder
+from app.services.presion import evaluar_cumplimiento
 
 from io import BytesIO
 from openpyxl import Workbook
@@ -48,11 +50,11 @@ def contar_dias_habiles_entre(fecha_inicio: date, fecha_fin: date) -> int:
     return dias
 
 
-def generar_folio(db: Session, anio: int) -> str:
-    """Genera el siguiente folio correlativo para el año, ej '2026-001'."""
+def generar_folio(db: Session, anio: int, empresa_id: int) -> str:
+    """Genera el siguiente folio correlativo para el año, dentro de la empresa (ej '2026-001')."""
     ultimo = (
         db.query(Reclamo)
-        .filter(extract("year", Reclamo.fecha_recepcion) == anio)
+        .filter(extract("year", Reclamo.fecha_recepcion) == anio, Reclamo.empresa_id == empresa_id)
         .order_by(Reclamo.id.desc())
         .first()
     )
@@ -63,17 +65,21 @@ def generar_folio(db: Session, anio: int) -> str:
     return f"{anio}-{siguiente:03d}"
 
 
-def crear_reclamo(db: Session, datos: ReclamoCreate) -> Reclamo:
+def crear_reclamo(db: Session, datos: ReclamoCreate, empresa_id: int) -> Reclamo:
     fecha_recepcion = datos.fecha_recepcion or datetime.now()
     anio = fecha_recepcion.year
-    folio = generar_folio(db, anio)
+    folio = generar_folio(db, anio, empresa_id)
     plazo_vencimiento = sumar_dias_habiles(fecha_recepcion.date(), DIAS_HABILES_PLAZO)
 
     nombre_reclamante = datos.nombre_reclamante
     rut_reclamante = datos.rut_reclamante
 
     if datos.cliente_id is not None:
-        cliente = db.query(Cliente).filter(Cliente.id == datos.cliente_id).first()
+        cliente = (
+            db.query(Cliente)
+            .filter(Cliente.id == datos.cliente_id, Cliente.empresa_id == empresa_id)
+            .first()
+        )
         if cliente is None:
             raise ValueError("Cliente no encontrado")
         # snapshot: se copian aunque el reclamo no traiga estos campos explícitos
@@ -81,6 +87,7 @@ def crear_reclamo(db: Session, datos: ReclamoCreate) -> Reclamo:
         rut_reclamante = cliente.rut
 
     reclamo = Reclamo(
+        empresa_id=empresa_id,
         folio=folio,
         anio=anio,
         cliente_id=datos.cliente_id,
@@ -100,8 +107,12 @@ def crear_reclamo(db: Session, datos: ReclamoCreate) -> Reclamo:
     return reclamo
 
 
-def responder_reclamo(db: Session, reclamo_id: int, datos: ReclamoResponder) -> Reclamo:
-    reclamo = db.query(Reclamo).filter(Reclamo.id == reclamo_id).first()
+def responder_reclamo(db: Session, reclamo_id: int, datos: ReclamoResponder, empresa_id: int) -> Reclamo:
+    reclamo = (
+        db.query(Reclamo)
+        .filter(Reclamo.id == reclamo_id, Reclamo.empresa_id == empresa_id)
+        .first()
+    )
     if reclamo is None:
         return None
 
@@ -122,9 +133,13 @@ def responder_reclamo(db: Session, reclamo_id: int, datos: ReclamoResponder) -> 
     return reclamo
 
 
-def cerrar_reclamo(db: Session, reclamo_id: int) -> Reclamo:
+def cerrar_reclamo(db: Session, reclamo_id: int, empresa_id: int) -> Reclamo:
     """Cierra un reclamo que ya fue respondido."""
-    reclamo = db.query(Reclamo).filter(Reclamo.id == reclamo_id).first()
+    reclamo = (
+        db.query(Reclamo)
+        .filter(Reclamo.id == reclamo_id, Reclamo.empresa_id == empresa_id)
+        .first()
+    )
     if reclamo is None:
         return None
     if reclamo.estado != "respondido":
@@ -135,9 +150,13 @@ def cerrar_reclamo(db: Session, reclamo_id: int) -> Reclamo:
     return reclamo
 
 
-def cerrar_reclamo_sin_respuesta(db: Session, reclamo_id: int, motivo: str) -> Reclamo:
+def cerrar_reclamo_sin_respuesta(db: Session, reclamo_id: int, motivo: str, empresa_id: int) -> Reclamo:
     """Cierra un reclamo directamente, sin pasar por 'respondido' (ej. retiro, duplicado)."""
-    reclamo = db.query(Reclamo).filter(Reclamo.id == reclamo_id).first()
+    reclamo = (
+        db.query(Reclamo)
+        .filter(Reclamo.id == reclamo_id, Reclamo.empresa_id == empresa_id)
+        .first()
+    )
     if reclamo is None:
         return None
     if reclamo.estado != "abierto":
@@ -149,9 +168,9 @@ def cerrar_reclamo_sin_respuesta(db: Session, reclamo_id: int, motivo: str) -> R
     return reclamo
 
 
-def listar_reclamos(db: Session, periodo: str = None, estado: str = None, cliente_id: int = None):
+def listar_reclamos(db: Session, empresa_id: int, periodo: str = None, estado: str = None, cliente_id: int = None):
     """periodo en formato 'YYYY-MM', filtra por fecha_recepcion."""
-    query = db.query(Reclamo)
+    query = db.query(Reclamo).filter(Reclamo.empresa_id == empresa_id)
     if periodo:
         anio, mes = periodo.split("-")
         query = query.filter(
@@ -164,17 +183,67 @@ def listar_reclamos(db: Session, periodo: str = None, estado: str = None, client
         query = query.filter(Reclamo.cliente_id == cliente_id)
     return query.order_by(Reclamo.fecha_recepcion.desc()).all()
 
-def obtener_reclamo(db: Session, reclamo_id: int) -> Reclamo:
-    return db.query(Reclamo).filter(Reclamo.id == reclamo_id).first()
+def obtener_reclamo(db: Session, reclamo_id: int, empresa_id: int) -> Reclamo:
+    return (
+        db.query(Reclamo)
+        .filter(Reclamo.id == reclamo_id, Reclamo.empresa_id == empresa_id)
+        .first()
+    )
 
 
-def construir_reporte_reclamos(db: Session, periodo: str) -> dict:
+
+def obtener_mediciones_por_reclamo(db: Session, reclamo_ids: list[int], empresa_id: int) -> dict[int, list[dict]]:
+    """
+    Trae todas las mediciones de presión asociadas a una lista de reclamos,
+    agrupadas por reclamo_id. Usado para enriquecer el reporte de reclamos
+    con su respaldo de mediciones (Cap. de reclamos vinculado a presión).
+    """
+    if not reclamo_ids:
+        return {}
+
+    mediciones = (
+        db.query(MedicionPresion)
+        .filter(
+            MedicionPresion.reclamo_id.in_(reclamo_ids),
+            MedicionPresion.empresa_id == empresa_id,
+        )
+        .order_by(MedicionPresion.fecha_medicion.asc())
+        .all()
+    )
+
+    por_reclamo: dict[int, list[dict]] = {}
+    for m in mediciones:
+        evaluacion = evaluar_cumplimiento(float(m.presion_mca), m.fecha_medicion)
+        por_reclamo.setdefault(m.reclamo_id, []).append({
+            "fecha_medicion": m.fecha_medicion.strftime("%Y-%m-%d"),
+            "presion_mca": float(m.presion_mca),
+            "cumple": evaluacion["cumple"],
+        })
+    return por_reclamo
+
+
+def esta_fuera_de_plazo(reclamo: Reclamo) -> bool:
+    """
+    Determina si un reclamo está fuera de plazo. Si ya fue respondido, usa
+    el valor calculado al momento de la respuesta (fuera_de_plazo guardado).
+    Si sigue abierto, lo calcula dinámicamente contra la fecha de hoy —
+    de lo contrario un reclamo abierto y vencido nunca se marcaría como
+    fuera de plazo hasta que alguien lo responda.
+    """
+    if reclamo.fuera_de_plazo is not None:
+        return reclamo.fuera_de_plazo
+    if reclamo.estado == "abierto":
+        return date.today() > reclamo.plazo_vencimiento
+    return False
+
+
+def construir_reporte_reclamos(db: Session, periodo: str, empresa_id: int) -> dict:
     """periodo en formato 'YYYY-MM'. Arma el resumen para el reporte de fiscalización SISS."""
-    reclamos = listar_reclamos(db, periodo=periodo)
+    reclamos = listar_reclamos(db, empresa_id, periodo=periodo)
 
     total = len(reclamos)
     respondidos = [r for r in reclamos if r.dias_habiles_respuesta is not None]
-    fuera_de_plazo = [r for r in respondidos if r.fuera_de_plazo]
+    fuera_de_plazo = [r for r in reclamos if esta_fuera_de_plazo(r)]
 
     por_tipo: dict[str, int] = {}
     por_estado: dict[str, int] = {}
@@ -188,6 +257,8 @@ def construir_reporte_reclamos(db: Session, periodo: str) -> dict:
         else None
     )
 
+    mediciones_por_reclamo = obtener_mediciones_por_reclamo(db, [r.id for r in reclamos], empresa_id)
+
     detalle = [
         {
             "folio": r.folio,
@@ -198,7 +269,8 @@ def construir_reporte_reclamos(db: Session, periodo: str) -> dict:
             "estado": r.estado,
             "fecha_respuesta": r.fecha_respuesta.strftime("%Y-%m-%d") if r.fecha_respuesta else None,
             "dias_habiles_respuesta": r.dias_habiles_respuesta,
-            "fuera_de_plazo": r.fuera_de_plazo,
+            "fuera_de_plazo": esta_fuera_de_plazo(r),
+            "mediciones_presion": mediciones_por_reclamo.get(r.id, []),
         }
         for r in reclamos
     ]
@@ -214,8 +286,8 @@ def construir_reporte_reclamos(db: Session, periodo: str) -> dict:
         "detalle": detalle,
     }
 
-def construir_excel_reporte_reclamos(periodo: str, db: Session) -> BytesIO:
-    reporte = construir_reporte_reclamos(db, periodo)
+def construir_excel_reporte_reclamos(periodo: str, db: Session, empresa_id: int) -> BytesIO:
+    reporte = construir_reporte_reclamos(db, periodo, empresa_id)
 
     wb = Workbook()
     ws = wb.active
@@ -263,8 +335,8 @@ def construir_excel_reporte_reclamos(periodo: str, db: Session) -> BytesIO:
     return buffer
 
 
-def construir_pdf_reporte_reclamos(periodo: str, db: Session) -> BytesIO:
-    reporte = construir_reporte_reclamos(db, periodo)
+def construir_pdf_reporte_reclamos(periodo: str, db: Session, empresa_id: int) -> BytesIO:
+    reporte = construir_reporte_reclamos(db, periodo, empresa_id)
     styles = getSampleStyleSheet()
 
     buffer = BytesIO()

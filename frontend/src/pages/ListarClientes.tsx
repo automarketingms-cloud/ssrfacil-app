@@ -77,7 +77,7 @@ export default function ListarClientes() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
         <h1 className="text-xl font-semibold text-text">Clientes</h1>
         <button
           onClick={() => navigate("/clientes/nuevo")}
@@ -90,7 +90,7 @@ export default function ListarClientes() {
         Listado de clientes registrados en la APR.
       </p>
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <input
           type="text"
           value={busqueda}
@@ -134,69 +134,71 @@ export default function ListarClientes() {
             No hay clientes que coincidan con el filtro.
           </p>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-primary-light/40 text-text">
-              <tr>
-                <th className="text-left px-4 py-2 font-medium">Nombre</th>
-                <th className="text-left px-4 py-2 font-medium">RUT</th>
-                <th className="text-left px-4 py-2 font-medium">Medidor</th>
-                <th className="text-left px-4 py-2 font-medium">Socio</th>
-                <th className="text-left px-4 py-2 font-medium">Estado</th>
-                <th className="text-center px-4 py-2 font-medium">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clientes.map((c) => (
-                <tr key={c.id} className="border-t border-border">
-                  <td className="px-4 py-2 text-text">{c.nombre}</td>
-                  <td className="px-4 py-2 text-muted">{c.rut}</td>
-                  <td className="px-4 py-2 text-muted">{c.numero_medidor}</td>
-                  <td className="px-4 py-2">
-                    {c.es_socio ? (
-                      <span className="text-xs font-medium bg-primary-light text-primary-dark px-2 py-1 rounded-full">
-                        Socio
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted">No socio</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    {c.activo ? (
-                      <span className="text-xs font-medium bg-success-soft text-success px-2 py-1 rounded-full">
-                        Activo
-                      </span>
-                    ) : (
-                      <span className="text-xs font-medium bg-danger-soft text-danger px-2 py-1 rounded-full">
-                        Inactivo
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    <div className="flex items-center justify-center gap-4">
-                      <button
-                        onClick={() => navigate(`/clientes/${c.id}`)}
-                        className="text-xs font-medium text-primary-dark hover:underline"
-                      >
-                        Ver
-                      </button>
-                      <button
-                        onClick={() => navigate(`/clientes/${c.id}/editar`)}
-                        className="text-xs font-medium text-primary-dark hover:underline"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleToggleActivo(c)}
-                        className="text-xs font-medium text-primary-dark hover:underline"
-                      >
-                        {c.activo ? "Desactivar" : "Reactivar"}
-                      </button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-primary-light/40 text-text">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">Nombre</th>
+                  <th className="text-left px-4 py-2 font-medium">RUT</th>
+                  <th className="text-left px-4 py-2 font-medium">Medidor</th>
+                  <th className="text-left px-4 py-2 font-medium">Socio</th>
+                  <th className="text-left px-4 py-2 font-medium">Estado</th>
+                  <th className="text-center px-4 py-2 font-medium">Acción</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {clientes.map((c) => (
+                  <tr key={c.id} className="border-t border-border">
+                    <td className="px-4 py-2 text-text">{c.nombre}</td>
+                    <td className="px-4 py-2 text-muted">{c.rut}</td>
+                    <td className="px-4 py-2 text-muted">{c.numero_medidor}</td>
+                    <td className="px-4 py-2">
+                      {c.es_socio ? (
+                        <span className="text-xs font-medium bg-primary-light text-primary-dark px-2 py-1 rounded-full">
+                          Socio
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted">No socio</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      {c.activo ? (
+                        <span className="text-xs font-medium bg-success-soft text-success px-2 py-1 rounded-full">
+                          Activo
+                        </span>
+                      ) : (
+                        <span className="text-xs font-medium bg-danger-soft text-danger px-2 py-1 rounded-full">
+                          Inactivo
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center justify-center gap-4">
+                        <button
+                          onClick={() => navigate(`/clientes/${c.id}`)}
+                          className="text-xs font-medium text-primary-dark hover:underline"
+                        >
+                          Ver
+                        </button>
+                        <button
+                          onClick={() => navigate(`/clientes/${c.id}/editar`)}
+                          className="text-xs font-medium text-primary-dark hover:underline"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleToggleActivo(c)}
+                          className="text-xs font-medium text-primary-dark hover:underline"
+                        >
+                          {c.activo ? "Desactivar" : "Reactivar"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

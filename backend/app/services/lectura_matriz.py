@@ -1,40 +1,51 @@
 from sqlalchemy.orm import Session
 from app.models.lectura_matriz import LecturaMatriz
-from app.models.lectura import Lectura  # ajusta el import según tu estructura
-from app.schemas.lectura_matriz import LecturaMatrizCreate
+from app.models.lectura import Lectura
+from app.schemas.lectura_matriz import LecturaMatrizCreate, LecturaMatrizUpdate
+from app.services.calculo_tarifa import validar_periodo_no_futuro
 
 
-def obtener_lectura_matriz_anterior(db: Session, periodo: str) -> LecturaMatriz | None:
+def obtener_lectura_matriz_anterior(db: Session, periodo: str, empresa_id: int) -> LecturaMatriz | None:
     """
     Trae la lectura del período inmediatamente anterior (el más reciente
     antes del periodo dado), igual que obtener_lectura_anterior para clientes.
     """
     return (
         db.query(LecturaMatriz)
-        .filter(LecturaMatriz.periodo < periodo)
+        .filter(LecturaMatriz.periodo < periodo, LecturaMatriz.empresa_id == empresa_id)
         .order_by(LecturaMatriz.periodo.desc())
         .first()
     )
 
 
-def obtener_consumo_matriz_periodo(db: Session, periodo: str) -> float:
+def obtener_consumo_matriz_periodo(db: Session, periodo: str, empresa_id: int) -> float:
     """
     Devuelve el consumo (m3) registrado por la lectura matriz en un período,
     o 0.0 si no hay lectura matriz para ese período. Helper compartido por
     calcular_comparativa_agua y calcular_comparativa_periodos para no repetir
     la misma query en ambos.
     """
-    lectura_matriz = db.query(LecturaMatriz).filter(LecturaMatriz.periodo == periodo).first()
+    lectura_matriz = (
+        db.query(LecturaMatriz)
+        .filter(LecturaMatriz.periodo == periodo, LecturaMatriz.empresa_id == empresa_id)
+        .first()
+    )
     return lectura_matriz.consumo_m3 if lectura_matriz else 0.0
 
 
-def actualizar_lectura_matriz(db: Session, lectura_id: int, data: "LecturaMatrizUpdate") -> LecturaMatriz:
-    lectura = db.query(LecturaMatriz).filter(LecturaMatriz.id == lectura_id).first()
+def actualizar_lectura_matriz(
+    db: Session, lectura_id: int, data: "LecturaMatrizUpdate", empresa_id: int
+) -> LecturaMatriz:
+    lectura = (
+        db.query(LecturaMatriz)
+        .filter(LecturaMatriz.id == lectura_id, LecturaMatriz.empresa_id == empresa_id)
+        .first()
+    )
     if not lectura:
         raise ValueError("Lectura matriz no encontrada")
 
     if data.lectura_actual is not None:
-        lectura_anterior = obtener_lectura_matriz_anterior(db, lectura.periodo)
+        lectura_anterior = obtener_lectura_matriz_anterior(db, lectura.periodo, empresa_id)
         lectura.lectura_actual = data.lectura_actual
         lectura.consumo_m3 = calcular_consumo_matriz(
             data.lectura_actual,
@@ -53,7 +64,7 @@ def actualizar_lectura_matriz(db: Session, lectura_id: int, data: "LecturaMatriz
     if data.lectura_actual is not None:
         siguiente = (
             db.query(LecturaMatriz)
-            .filter(LecturaMatriz.periodo > lectura.periodo)
+            .filter(LecturaMatriz.periodo > lectura.periodo, LecturaMatriz.empresa_id == empresa_id)
             .order_by(LecturaMatriz.periodo.asc())
             .first()
         )
@@ -74,18 +85,27 @@ def calcular_consumo_matriz(lectura_actual: float, lectura_anterior: float | Non
     return consumo
 
 
-def crear_lectura_matriz(db: Session, data: LecturaMatrizCreate, foto_ruta: str) -> LecturaMatriz:
-    existente = db.query(LecturaMatriz).filter(LecturaMatriz.periodo == data.periodo).first()
+def crear_lectura_matriz(
+    db: Session, data: LecturaMatrizCreate, foto_ruta: str, empresa_id: int
+) -> LecturaMatriz:
+    validar_periodo_no_futuro(data.periodo)
+
+    existente = (
+        db.query(LecturaMatriz)
+        .filter(LecturaMatriz.periodo == data.periodo, LecturaMatriz.empresa_id == empresa_id)
+        .first()
+    )
     if existente:
         raise ValueError(f"Ya existe una lectura matriz registrada para el período {data.periodo}")
 
-    lectura_anterior = obtener_lectura_matriz_anterior(db, data.periodo)
+    lectura_anterior = obtener_lectura_matriz_anterior(db, data.periodo, empresa_id)
     consumo_m3 = calcular_consumo_matriz(
         data.lectura_actual,
         lectura_anterior.lectura_actual if lectura_anterior else None,
     )
 
     nueva = LecturaMatriz(
+        empresa_id=empresa_id,
         periodo=data.periodo,
         fecha_lectura=data.fecha_lectura,
         lectura_actual=data.lectura_actual,
@@ -99,22 +119,28 @@ def crear_lectura_matriz(db: Session, data: LecturaMatrizCreate, foto_ruta: str)
     return nueva
 
 
-def listar_lecturas_matriz(db: Session) -> list[LecturaMatriz]:
-    return db.query(LecturaMatriz).order_by(LecturaMatriz.periodo.desc()).all()
+def listar_lecturas_matriz(db: Session, empresa_id: int) -> list[LecturaMatriz]:
+    return (
+        db.query(LecturaMatriz)
+        .filter(LecturaMatriz.empresa_id == empresa_id)
+        .order_by(LecturaMatriz.periodo.desc())
+        .all()
+    )
 
 
 
-def calcular_consumo_total_clientes(db: Session, periodo: str) -> float:
+def calcular_consumo_total_clientes(db: Session, periodo: str, empresa_id: int) -> float:
     """
-    Suma el consumo real de todos los clientes en el período. Lectura no
-    guarda consumo_m3 como columna (se calcula al vuelo en facturacion.py),
-    así que se replica el mismo criterio: sin lectura anterior, se compara
-    contra 0 (igual que calcular_consumo para la primera lectura de un cliente).
-    Evita N+1 trayendo lecturas del período y anteriores en 2 queries.
+    Suma el consumo real de todos los clientes de la empresa en el
+    período. Lectura no guarda consumo_m3 como columna (se calcula al
+    vuelo en facturacion.py), así que se replica el mismo criterio: sin
+    lectura anterior, se compara contra 0 (igual que calcular_consumo
+    para la primera lectura de un cliente). Evita N+1 trayendo lecturas
+    del período y anteriores en 2 queries.
     """
     lecturas_periodo = (
         db.query(Lectura.cliente_id, Lectura.lectura_actual)
-        .filter(Lectura.periodo == periodo)
+        .filter(Lectura.periodo == periodo, Lectura.empresa_id == empresa_id)
         .all()
     )
     if not lecturas_periodo:
@@ -124,7 +150,11 @@ def calcular_consumo_total_clientes(db: Session, periodo: str) -> float:
 
     lecturas_anteriores = (
         db.query(Lectura.cliente_id, Lectura.periodo, Lectura.lectura_actual)
-        .filter(Lectura.cliente_id.in_(cliente_ids), Lectura.periodo < periodo)
+        .filter(
+            Lectura.cliente_id.in_(cliente_ids),
+            Lectura.periodo < periodo,
+            Lectura.empresa_id == empresa_id,
+        )
         .order_by(Lectura.cliente_id, Lectura.periodo.desc())
         .all()
     )
@@ -144,17 +174,19 @@ def calcular_consumo_total_clientes(db: Session, periodo: str) -> float:
     return total
 
 
-def calcular_comparativa_agua(db: Session, periodo: str) -> dict:
+def calcular_comparativa_agua(db: Session, periodo: str, empresa_id: int) -> dict:
     """
     Compara el consumo del medidor matriz contra la suma de consumo de
     todos los clientes en el mismo período, para detectar agua no
     facturada (pérdidas, fugas, errores de medición, etc.)
     """
     lectura_matriz = (
-        db.query(LecturaMatriz).filter(LecturaMatriz.periodo == periodo).first()
+        db.query(LecturaMatriz)
+        .filter(LecturaMatriz.periodo == periodo, LecturaMatriz.empresa_id == empresa_id)
+        .first()
     )
-    consumo_matriz = obtener_consumo_matriz_periodo(db, periodo)
-    consumo_clientes = calcular_consumo_total_clientes(db, periodo)
+    consumo_matriz = obtener_consumo_matriz_periodo(db, periodo, empresa_id)
+    consumo_clientes = calcular_consumo_total_clientes(db, periodo, empresa_id)
 
     agua_no_facturada_m3 = consumo_matriz - consumo_clientes
     porcentaje_perdida = (
@@ -171,7 +203,7 @@ def calcular_comparativa_agua(db: Session, periodo: str) -> dict:
     }
 
 
-def calcular_comparativa_historica(db: Session, meses: int = 6) -> list[dict]:
+def calcular_comparativa_historica(db: Session, empresa_id: int, meses: int = 6) -> list[dict]:
     """
     Devuelve la comparativa de agua no facturada para los últimos N períodos
     con lectura matriz registrada, ordenados del más antiguo al más reciente
@@ -180,16 +212,17 @@ def calcular_comparativa_historica(db: Session, meses: int = 6) -> list[dict]:
     """
     periodos = (
         db.query(LecturaMatriz.periodo)
+        .filter(LecturaMatriz.empresa_id == empresa_id)
         .order_by(LecturaMatriz.periodo.desc())
         .limit(meses)
         .all()
     )
     periodos_ordenados = sorted(p[0] for p in periodos)  # ascendente para el gráfico
 
-    return [calcular_comparativa_agua(db, periodo) for periodo in periodos_ordenados]
+    return [calcular_comparativa_agua(db, periodo, empresa_id) for periodo in periodos_ordenados]
 
 
-def calcular_comparativa_periodos(db: Session, periodos: list[str]) -> dict:
+def calcular_comparativa_periodos(db: Session, periodos: list[str], empresa_id: int) -> dict:
     """
     Agrega consumo matriz y consumo clientes sobre un conjunto de períodos
     (un año completo o el histórico total), sumando los m3 en vez de
@@ -199,8 +232,8 @@ def calcular_comparativa_periodos(db: Session, periodos: list[str]) -> dict:
     consumo_matriz_total = 0.0
     consumo_clientes_total = 0.0
     for periodo in periodos:
-        consumo_matriz_total += obtener_consumo_matriz_periodo(db, periodo)
-        consumo_clientes_total += calcular_consumo_total_clientes(db, periodo)
+        consumo_matriz_total += obtener_consumo_matriz_periodo(db, periodo, empresa_id)
+        consumo_clientes_total += calcular_consumo_total_clientes(db, periodo, empresa_id)
 
     agua_no_facturada_m3 = consumo_matriz_total - consumo_clientes_total
     porcentaje_perdida = (
@@ -214,20 +247,24 @@ def calcular_comparativa_periodos(db: Session, periodos: list[str]) -> dict:
     }
 
 
-def calcular_comparativa_anual(db: Session, anio: str) -> dict:
+def calcular_comparativa_anual(db: Session, anio: str, empresa_id: int) -> dict:
     periodos = [
         p[0] for p in db.query(LecturaMatriz.periodo)
-        .filter(LecturaMatriz.periodo.like(f"{anio}-%"))
+        .filter(LecturaMatriz.periodo.like(f"{anio}-%"), LecturaMatriz.empresa_id == empresa_id)
         .all()
     ]
-    resultado = calcular_comparativa_periodos(db, periodos)
+    resultado = calcular_comparativa_periodos(db, periodos, empresa_id)
     resultado["anio"] = anio
     resultado["tiene_datos"] = len(periodos) > 0
     return resultado
 
 
-def calcular_comparativa_total(db: Session) -> dict:
-    periodos = [p[0] for p in db.query(LecturaMatriz.periodo).all()]
-    resultado = calcular_comparativa_periodos(db, periodos)
+def calcular_comparativa_total(db: Session, empresa_id: int) -> dict:
+    periodos = [
+        p[0] for p in db.query(LecturaMatriz.periodo)
+        .filter(LecturaMatriz.empresa_id == empresa_id)
+        .all()
+    ]
+    resultado = calcular_comparativa_periodos(db, periodos, empresa_id)
     resultado["tiene_datos"] = len(periodos) > 0
     return resultado

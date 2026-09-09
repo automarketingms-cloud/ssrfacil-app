@@ -21,19 +21,53 @@ import {
   UserCog,
   LogOut,
   Building2,
+  Menu,
+  X,
+  Wallet,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import type { Rol } from "../types";
 
-const navSueltos = [
-  { to: "/", label: "Inicio", icon: Home },
-  { to: "/clientes", label: "Clientes", icon: Users },
-  { to: "/tarifas", label: "Tarifas", icon: Receipt },
-  { to: "/reclamos", label: "Reclamos", icon: MessageSquare },
+const navSueltos: {
+  to: string;
+  label: string;
+  icon: typeof Home;
+  roles: Rol[];
+}[] = [
+  {
+    to: "/",
+    label: "Inicio",
+    icon: Home,
+    roles: ["admin", "oficina", "terreno", "super_admin"],
+  },
+  {
+    to: "/clientes",
+    label: "Clientes",
+    icon: Users,
+    roles: ["admin", "oficina"],
+  },
+  {
+    to: "/tarifas",
+    label: "Tarifas",
+    icon: Receipt,
+    roles: ["admin", "oficina"],
+  },
+  {
+    to: "/reclamos",
+    label: "Reclamos",
+    icon: MessageSquare,
+    roles: ["admin", "oficina"],
+  },
 ];
 
-const navGrupos = [
+const navGrupos: {
+  label: string;
+  roles: Rol[];
+  items: { to: string; label: string; icon: typeof Home }[];
+}[] = [
   {
     label: "Terreno",
+    roles: ["admin", "oficina", "terreno"],
     items: [
       { to: "/lecturas", label: "Ingresar Lectura", icon: Droplet },
       { to: "/presion", label: "Registrar Presión", icon: Gauge },
@@ -48,6 +82,7 @@ const navGrupos = [
   },
   {
     label: "Lecturas",
+    roles: ["admin", "oficina"],
     items: [
       {
         to: "/lecturas/historial",
@@ -63,15 +98,18 @@ const navGrupos = [
   },
   {
     label: "Facturación",
+    roles: ["admin", "oficina"],
     items: [
       { to: "/consumo", label: "Ver Consumo", icon: BarChart3 },
       { to: "/resumen", label: "Resumen Mensual", icon: FileText },
       { to: "/facturas", label: "Facturación", icon: ReceiptText },
+      { to: "/caja", label: "Mi Caja", icon: Wallet },
       { to: "/pagos", label: "Registrar Pago", icon: DollarSign },
     ],
   },
   {
     label: "Reportes",
+    roles: ["admin", "oficina"],
     items: [
       { to: "/reportes", label: "Reportes SISS", icon: ClipboardList },
       {
@@ -104,6 +142,7 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
+  const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
 
   const [gruposAbiertos, setGruposAbiertos] = useState<Set<string>>(() => {
     const grupoActivo = navGrupos.find((g) =>
@@ -129,22 +168,55 @@ export default function Layout() {
     navigate("/login");
   }
 
+  function handleNavClick() {
+    setMenuMovilAbierto(false);
+  }
+
   const esAdmin = usuario ? ROLES_ADMIN.includes(usuario.rol) : false;
   const esSuperAdmin = usuario?.rol === "super_admin";
 
+  const navSueltosVisibles = usuario
+    ? navSueltos.filter((item) => item.roles.includes(usuario.rol))
+    : [];
+
+  const navGruposVisibles = usuario
+    ? navGrupos.filter((grupo) => grupo.roles.includes(usuario.rol))
+    : [];
+
   return (
     <div className="min-h-screen flex">
-      <aside className="w-64 h-screen sticky top-0 bg-navy pt-2 px-6 pb-6 flex flex-col gap-1">
-        <div className="mb-0 flex items-start justify-start shrink-0">
+      {/* Overlay mobile: cierra el menú al tocar fuera */}
+      {menuMovilAbierto && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setMenuMovilAbierto(false)}
+        />
+      )}
+
+      <aside
+        className={`w-64 h-screen fixed lg:sticky top-0 pt-2 px-6 pb-6 flex flex-col gap-1 bg-navy z-40 transition-transform duration-200 ${
+          menuMovilAbierto ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0`}
+      >
+        <div className="mb-0 flex items-start justify-between lg:justify-start shrink-0">
           <img
             src="/logo.png"
             alt="APR Fácil"
-            className="h-[168px] w-auto block"
+            className="h-24 lg:h-[168px] w-auto block"
           />
+          <button
+            onClick={() => setMenuMovilAbierto(false)}
+            className="lg:hidden text-slate-300 hover:text-white p-1 mt-2"
+          >
+            <X size={22} />
+          </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto flex flex-col gap-1 min-h-0 sidebar-nav">
-          {navSueltos.map((item) => {
+        <nav
+          onClick={handleNavClick}
+          className="flex-1 overflow-y-auto flex flex-col gap-1 min-h-0 sidebar-nav"
+        >
+          {navSueltosVisibles.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink key={item.to} to={item.to} className={linkClass}>
@@ -161,6 +233,13 @@ export default function Layout() {
             </NavLink>
           )}
 
+          {usuario?.rol === "admin" && (
+            <NavLink to="/cajas-empresa" className={linkClass}>
+              <Wallet size={18} />
+              Gestión de Cajas
+            </NavLink>
+          )}
+
           {esSuperAdmin && (
             <NavLink to="/empresas/nueva" className={linkClass}>
               <Building2 size={18} />
@@ -170,7 +249,7 @@ export default function Layout() {
 
           <div className="h-px bg-navy-light my-2" />
 
-          {navGrupos.map((grupo) => {
+          {navGruposVisibles.map((grupo) => {
             const abierto = gruposAbiertos.has(grupo.label);
             const grupoActivo = grupo.items.some(
               (item) => item.to === location.pathname,
@@ -178,7 +257,10 @@ export default function Layout() {
             return (
               <div key={grupo.label}>
                 <button
-                  onClick={() => toggleGrupo(grupo.label)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleGrupo(grupo.label);
+                  }}
                   className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wide transition-colors ${
                     grupoActivo
                       ? "text-white"
@@ -216,6 +298,7 @@ export default function Layout() {
         {esAdmin && (
           <NavLink
             to="/configuracion"
+            onClick={handleNavClick}
             className={({ isActive }) =>
               `shrink-0 flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive
@@ -233,6 +316,7 @@ export default function Layout() {
           <div className="shrink-0 border-t border-navy-light pt-3 mt-1">
             <NavLink
               to="/perfil"
+              onClick={handleNavClick}
               className="px-4 py-1 block hover:bg-navy-light rounded-lg transition-colors"
             >
               <p className="text-sm font-medium text-white truncate">
@@ -252,9 +336,24 @@ export default function Layout() {
           </div>
         )}
       </aside>
-      <main className="flex-1 p-8 bg-bg">
-        <Outlet />
-      </main>
+
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top bar solo mobile */}
+        <header className="lg:hidden sticky top-0 z-20 bg-navy flex items-center justify-between px-4 py-1.5">
+          <button
+            onClick={() => setMenuMovilAbierto(true)}
+            className="text-slate-300 hover:text-white p-1"
+          >
+            <Menu size={24} />
+          </button>
+          <img src="/logo.png" alt="APR Fácil" className="h-20 w-auto" />
+          <div className="w-6" />
+        </header>
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-bg">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import get_current_user, require_roles
+from app.models.usuario import Usuario, RolUsuario
 from app.models.lectura import Lectura
 from app.models.cliente import Cliente
 from app.models.factura import Factura
@@ -32,13 +34,18 @@ async def crear_lectura(
     lectura_actual: float = Form(...),
     foto: UploadFile = File(...),
     db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
 ):
     if foto.content_type not in CONTENT_TYPES_PERMITIDOS:
         raise HTTPException(
             status_code=400, detail="El archivo debe ser una imagen (jpg, png, webp)"
         )
 
-    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    cliente = (
+        db.query(Cliente)
+        .filter(Cliente.id == cliente_id, Cliente.empresa_id == current_user.empresa_id)
+        .first()
+    )
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
@@ -92,6 +99,7 @@ async def crear_lectura(
         raise HTTPException(status_code=502, detail=f"No se pudo subir la foto: {e}")
 
     nueva_lectura = Lectura(
+        empresa_id=current_user.empresa_id,
         cliente_id=cliente_id,
         fecha_lectura=fecha_lectura,
         periodo=periodo,
@@ -113,8 +121,9 @@ def listar_lecturas(
     page: int = 1,
     limit: int = 20,
     db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
 ):
-    query = db.query(Lectura)
+    query = db.query(Lectura).filter(Lectura.empresa_id == current_user.empresa_id)
     if cliente_id:
         query = query.filter(Lectura.cliente_id == cliente_id)
     if periodo:
@@ -139,7 +148,11 @@ def listar_lecturas(
         periodos = {p[1] for p in pares}
         facturas_relevantes = (
             db.query(Factura.cliente_id, Factura.periodo)
-            .filter(Factura.cliente_id.in_(cliente_ids), Factura.periodo.in_(periodos))
+            .filter(
+                Factura.cliente_id.in_(cliente_ids),
+                Factura.periodo.in_(periodos),
+                Factura.empresa_id == current_user.empresa_id,
+            )
             .all()
         )
         facturadas = {(f.cliente_id, f.periodo) for f in facturas_relevantes}
@@ -175,16 +188,20 @@ def listar_lecturas(
 def obtener_ruta_lectura(
     estado: str | None = None,
     db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
 ):
     """
     Listado de clientes del período actual con su estado de lectura,
     para el trabajador de terreno. estado: pendiente | leido | (vacío = todos)
     """
-    return construir_ruta_lectura(db, estado)
+    return construir_ruta_lectura(db, current_user.empresa_id, estado)
 
 @router.get("/ruta/excel")
-def descargar_ruta_lectura_excel(db: Session = Depends(get_db)):
-    buffer = construir_excel_ruta_lectura(db)
+def descargar_ruta_lectura_excel(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    buffer = construir_excel_ruta_lectura(db, current_user.empresa_id)
     return StreamingResponse(
         buffer,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -193,8 +210,11 @@ def descargar_ruta_lectura_excel(db: Session = Depends(get_db)):
 
 
 @router.get("/ruta/pdf")
-def descargar_ruta_lectura_pdf(db: Session = Depends(get_db)):
-    buffer = construir_pdf_ruta_lectura(db)
+def descargar_ruta_lectura_pdf(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    buffer = construir_pdf_ruta_lectura(db, current_user.empresa_id)
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
@@ -203,8 +223,16 @@ def descargar_ruta_lectura_pdf(db: Session = Depends(get_db)):
 
 
 @router.get("/{lectura_id}", response_model=LecturaResponse)
-def obtener_lectura(lectura_id: int, db: Session = Depends(get_db)):
-    lectura = db.query(Lectura).filter(Lectura.id == lectura_id).first()
+def obtener_lectura(
+    lectura_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    lectura = (
+        db.query(Lectura)
+        .filter(Lectura.id == lectura_id, Lectura.empresa_id == current_user.empresa_id)
+        .first()
+    )
     if not lectura:
         raise HTTPException(status_code=404, detail="Lectura no encontrada")
 
@@ -237,8 +265,16 @@ def obtener_lectura(lectura_id: int, db: Session = Depends(get_db)):
     }
 
 @router.get("/{lectura_id}/foto")
-def obtener_foto_lectura(lectura_id: int, db: Session = Depends(get_db)):
-    lectura = db.query(Lectura).filter(Lectura.id == lectura_id).first()
+def obtener_foto_lectura(
+    lectura_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    lectura = (
+        db.query(Lectura)
+        .filter(Lectura.id == lectura_id, Lectura.empresa_id == current_user.empresa_id)
+        .first()
+    )
     if not lectura:
         raise HTTPException(status_code=404, detail="Lectura no encontrada")
     if not lectura.foto_ruta:
@@ -251,8 +287,17 @@ def obtener_foto_lectura(lectura_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{lectura_id}", response_model=LecturaResponse)
-def editar_lectura(lectura_id: int, datos: LecturaUpdate, db: Session = Depends(get_db)):
-    lectura = db.query(Lectura).filter(Lectura.id == lectura_id).first()
+def editar_lectura(
+    lectura_id: int,
+    datos: LecturaUpdate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    lectura = (
+        db.query(Lectura)
+        .filter(Lectura.id == lectura_id, Lectura.empresa_id == current_user.empresa_id)
+        .first()
+    )
     if not lectura:
         raise HTTPException(status_code=404, detail="Lectura no encontrada")
 
@@ -312,13 +357,21 @@ def editar_lectura(lectura_id: int, datos: LecturaUpdate, db: Session = Depends(
 
 
 @router.post("/termino-medio", response_model=LecturaResponse)
-def crear_lectura_termino_medio(datos: LecturaTerminoMedioCreate, db: Session = Depends(get_db)):
+def crear_lectura_termino_medio(
+    datos: LecturaTerminoMedioCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
     """
     Registra una lectura estimada por término medio (Cap. 4 manual SISS),
     para cuando no se pudo leer el medidor de un cliente en el período.
     No requiere foto: no hubo medición real que respaldar.
     """
-    cliente = db.query(Cliente).filter(Cliente.id == datos.cliente_id).first()
+    cliente = (
+        db.query(Cliente)
+        .filter(Cliente.id == datos.cliente_id, Cliente.empresa_id == current_user.empresa_id)
+        .first()
+    )
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
@@ -353,6 +406,7 @@ def crear_lectura_termino_medio(datos: LecturaTerminoMedioCreate, db: Session = 
         raise HTTPException(status_code=400, detail=str(e))
 
     nueva_lectura = Lectura(
+        empresa_id=current_user.empresa_id,
         cliente_id=datos.cliente_id,
         fecha_lectura=datos.fecha_lectura,
         periodo=datos.periodo,

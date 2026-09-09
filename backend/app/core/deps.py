@@ -42,3 +42,13 @@ def require_roles(*roles_permitidos: RolUsuario):
             )
         return usuario
     return wrapper
+
+
+
+def empresa_id_o_error(usuario: Usuario) -> int:
+    if usuario.empresa_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este usuario no pertenece a ninguna empresa",
+        )
+    return usuario.empresa_id

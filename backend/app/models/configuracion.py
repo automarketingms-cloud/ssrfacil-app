@@ -1,5 +1,4 @@
-# app/models/configuracion.py
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -18,6 +17,11 @@ class Configuracion(Base):
     horario_atencion = Column(String, nullable=True)
     email = Column(String, nullable=True)
     giro = Column(String, nullable=True)
+    comuna = Column(String, nullable=True)
+    actividad_economica = Column(JSON, nullable=True) 
+
+    certificado_pfx_path = Column(String, nullable=True)
+    certificado_password = Column(String, nullable=True) 
 
     # Configuración de facturación
     dias_plazo_pago = Column(Integer, nullable=False, default=30)

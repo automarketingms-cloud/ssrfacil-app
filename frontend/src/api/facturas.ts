@@ -1,18 +1,12 @@
+import { apiFetch } from "./http";
 import type { Factura, ResumenGeneracionFacturas } from "../types";
-
-const API_URL = import.meta.env.VITE_API_URL;
 
 export async function generarFacturasPeriodo(
   periodo: string,
 ): Promise<ResumenGeneracionFacturas> {
-  const res = await fetch(`${API_URL}/facturas/generar/${periodo}`, {
+  return apiFetch<ResumenGeneracionFacturas>(`/facturas/generar/${periodo}`, {
     method: "POST",
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail ?? "Error al generar facturas");
-  }
-  return res.json();
 }
 
 export async function listarFacturas(filtros?: {
@@ -25,23 +19,31 @@ export async function listarFacturas(filtros?: {
   if (filtros?.cliente_id) params.set("cliente_id", String(filtros.cliente_id));
   if (filtros?.estado) params.set("estado", filtros.estado);
 
-  const res = await fetch(`${API_URL}/facturas/?${params.toString()}`);
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail ?? "Error al listar facturas");
-  }
-  return res.json();
+  return apiFetch<Factura[]>(`/facturas/?${params.toString()}`);
 }
 
 export async function obtenerFactura(facturaId: number): Promise<Factura> {
-  const res = await fetch(`${API_URL}/facturas/${facturaId}`);
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail ?? "Error al obtener factura");
-  }
-  return res.json();
+  return apiFetch<Factura>(`/facturas/${facturaId}`);
 }
 
-export function urlFacturaPdf(facturaId: number): string {
-  return `${API_URL}/facturas/${facturaId}/pdf`;
+export async function enviarFacturaSii(
+  id: number,
+): Promise<{ mensaje: string; folio: string; respuesta_sii: unknown }> {
+  return apiFetch<{ mensaje: string; folio: string; respuesta_sii: unknown }>(
+    `/facturas/${id}/enviar-sii`,
+    { method: "POST" },
+  );
+}
+
+export async function descargarFacturaPdf(facturaId: number): Promise<void> {
+  const blob = await apiFetch<Blob>(`/facturas/${facturaId}/pdf`, {
+    responseType: "blob",
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `factura_${facturaId}.pdf`;
+  link.click();
+  URL.revokeObjectURL(url);
 }

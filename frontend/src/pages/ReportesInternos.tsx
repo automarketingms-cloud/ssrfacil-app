@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 interface ReporteInterno {
   titulo: string;
   descripcion: string;
   ruta: string;
   disponible: boolean;
+  soloAdmin?: boolean;
 }
 
 const reportes: ReporteInterno[] = [
@@ -15,9 +17,28 @@ const reportes: ReporteInterno[] = [
     ruta: "/reportes-internos/agua-no-facturada",
     disponible: true,
   },
+  {
+    titulo: "Clientes con Subsidio",
+    descripcion:
+      "Listado de clientes con subsidio activo y su porcentaje de descuento",
+    ruta: "/reportes-internos/clientes-subsidio",
+    disponible: true,
+  },
+  {
+    titulo: "Pagos",
+    descripcion: "Pagos registrados por fecha y, opcionalmente, por cajero",
+    ruta: "/reportes-internos/pagos",
+    disponible: true,
+    soloAdmin: true,
+  },
 ];
 
 export default function ReportesInternos() {
+  const { usuario } = useAuth();
+  const reportesVisibles = reportes.filter(
+    (r) => !r.soloAdmin || usuario?.rol === "admin",
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -29,7 +50,7 @@ export default function ReportesInternos() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {reportes.map((r) => (
+        {reportesVisibles.map((r) => (
           <Link
             key={r.ruta}
             to={r.disponible ? r.ruta : "#"}
