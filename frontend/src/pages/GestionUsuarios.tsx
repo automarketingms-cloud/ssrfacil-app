@@ -1,5 +1,6 @@
 // src/pages/GestionUsuarios.tsx
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect } from "react";
+import type { FormEvent } from "react";
 import { listarUsuarios, crearUsuario, editarUsuario } from "../api/usuarios";
 import { listarEmpresas } from "../api/empresas";
 import { useAuth } from "../context/AuthContext";
