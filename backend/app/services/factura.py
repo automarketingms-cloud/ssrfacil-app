@@ -9,6 +9,7 @@ from app.services.calculo_tarifa import (
     calcular_consumo,
     calcular_total_a_pagar,
     validar_orden_periodo_facturacion,
+    determinar_tipo_dte
 )
 from app.models.pago import Pago
 
@@ -93,6 +94,7 @@ def generar_factura(db: Session, cliente_id: int, periodo: str, empresa_id: int)
         cliente_id=cliente_id,
         periodo=periodo,
         tipo_facturacion="termino_medio" if lectura.es_promedio else "normal",
+        tipo_dte=determinar_tipo_dte(cliente),
         lectura_anterior=lectura_anterior_valor,
         lectura_actual=lectura.lectura_actual,
         fecha_lectura_anterior=fecha_lectura_anterior,

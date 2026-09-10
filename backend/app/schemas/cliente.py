@@ -15,12 +15,22 @@ class ClienteBase(BaseModel):
     es_socio: bool = True
     tiene_subsidio: bool = False
     porcentaje_subsidio: float = 0.0  # ej: 0.5 = 50%
+    tipo_cliente: Optional[str] = None  # "persona_natural" | "persona_juridica"
+    giro: Optional[str] = None
+    comuna: Optional[str] = None
 
     @field_validator("rut")
     @classmethod
     def validar_rut_cliente(cls, v: str) -> str:
         if not validar_rut(v):
             raise ValueError("RUT inválido")
+        return v
+
+    @field_validator("tipo_cliente")
+    @classmethod
+    def validar_tipo_cliente(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in ("persona_natural", "persona_juridica"):
+            raise ValueError("tipo_cliente debe ser 'persona_natural' o 'persona_juridica'")
         return v
 
 
@@ -39,12 +49,22 @@ class ClienteUpdate(BaseModel):
     es_socio: Optional[bool] = None
     tiene_subsidio: Optional[bool] = None
     porcentaje_subsidio: Optional[float] = None
+    tipo_cliente: Optional[str] = None
+    giro: Optional[str] = None
+    comuna: Optional[str] = None
 
     @field_validator("rut")
     @classmethod
     def validar_rut_cliente_update(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and not validar_rut(v):
             raise ValueError("RUT inválido")
+        return v
+
+    @field_validator("tipo_cliente")
+    @classmethod
+    def validar_tipo_cliente_update(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in ("persona_natural", "persona_juridica"):
+            raise ValueError("tipo_cliente debe ser 'persona_natural' o 'persona_juridica'")
         return v
 
 

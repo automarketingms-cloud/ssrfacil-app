@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from app.core.database import engine, Base
 from app.api import (
@@ -13,10 +14,16 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+FRONTEND_URL = os.getenv("FRONTEND_URL", "")
+
+origins = ["http://localhost:5173"]
+if FRONTEND_URL:
+    origins.append(FRONTEND_URL)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

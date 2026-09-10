@@ -222,3 +222,19 @@ def validar_orden_periodo_facturacion(db: Session, cliente_id: int, periodo: str
             f"tiene una factura del periodo {factura_mas_nueva.periodo}, más reciente. "
             f"Facturar fuera de orden puede generar saldos e intereses incorrectos."
         )
+
+
+def determinar_tipo_dte(cliente: Cliente) -> str:
+    """
+    Determina el tipo de Documento Tributario Electrónico según:
+    - es_socio: True = exento de IVA, False = afecto
+    - tipo_cliente: "persona_juridica" = Factura, "persona_natural" (o None) = Boleta
+    Devuelve el código DTE como string, coherente con el tipo de campo
+    Factura.tipo_dte.
+    """
+    es_juridica = cliente.tipo_cliente == "persona_juridica"
+
+    if cliente.es_socio:
+        return "34" if es_juridica else "41"  # exenta: Factura o Boleta
+    else:
+        return "33" if es_juridica else "39"  # afecta: Factura o Boleta

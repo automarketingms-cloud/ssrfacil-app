@@ -15,8 +15,6 @@ SIMPLEAPI_BASE_URL = os.getenv("SIMPLEAPI_BASE_URL")
 BUCKET_CERTIFICADOS = "certificados-sii"
 SIMPLEAPI_API_KEY = os.getenv("SIMPLEAPI_API_KEY")
 
-TIPO_DTE_BOLETA = "39"
-
 
 def _construir_emisor(config: Configuracion) -> dict:
     return {
@@ -32,25 +30,30 @@ def _construir_emisor(config: Configuracion) -> dict:
 
 def _construir_receptor(factura: Factura) -> dict:
     cliente = factura.cliente
+    es_factura = factura.tipo_dte in ("33", "34")
     return {
         "Rut": cliente.rut,
         "RazonSocial": cliente.nombre,
         "Direccion": cliente.direccion or "",
-        "Comuna": "",  # boleta no exige comuna del receptor
-        "Giro": "",    # boleta no exige giro del receptor
+        "Comuna": (cliente.comuna or "") if es_factura else "",
+        "Giro": (cliente.giro or "") if es_factura else "",
         "Contacto": "",
     }
 
 
 def _construir_totales_y_recargos(factura: Factura) -> tuple[dict, list]:
     """
-    Separa el consumo del período (neto + IVA) del arrastre de deuda anterior.
-    Asunción: saldo_anterior + interes_mora van como recargo aparte, sin IVA
-    adicional (la mora no genera IVA, y el saldo_anterior ya tributó IVA
-    cuando se emitió su boleta original). Confirmar este criterio antes de
-    ir a producción.
+    Separa el consumo del período (neto + IVA, si aplica) del arrastre de
+    deuda anterior. Para tipos exentos (34/41) MontoExento lleva el neto
+    y MontoNeto/IVA quedan en 0, según lo que exige el esquema SII.
+    Asunción: saldo_anterior + interes_mora van como recargo aparte, sin
+    IVA adicional (la mora no genera IVA, y el saldo_anterior ya tributó
+    IVA cuando se emitió su boleta original). Confirmar este criterio
+    antes de ir a producción.
     """
-    monto_neto = round(
+    es_exento = factura.tipo_dte in ("34", "41")
+
+    monto_neto_o_exento = round(
         factura.cargo_fijo
         + factura.monto_variable
         + factura.cargo_fondo_reposicion
@@ -59,8 +62,9 @@ def _construir_totales_y_recargos(factura: Factura) -> tuple[dict, list]:
     recargo = round(factura.saldo_anterior + factura.interes_mora)
 
     totales = {
-        "MontoNeto": monto_neto,
-        "TasaIVA": 19,
+        "MontoNeto": 0 if es_exento else monto_neto_o_exento,
+        "MontoExento": monto_neto_o_exento if es_exento else 0,
+        "TasaIVA": 0 if es_exento else 19,
         "IVA": round(factura.iva),
         "MontoTotal": round(factura.total_a_pagar),
     }
@@ -79,12 +83,14 @@ def _construir_totales_y_recargos(factura: Factura) -> tuple[dict, list]:
 
 def _construir_documento(factura: Factura, config: Configuracion, folio: int, password_certificado: str) -> dict:
     totales, descuentos_recargos = _construir_totales_y_recargos(factura)
+    es_exento = factura.tipo_dte in ("34", "41")
+    monto_item = totales["MontoExento"] if es_exento else totales["MontoNeto"]
 
     return {
         "Documento": {
             "Encabezado": {
                 "IdentificacionDTE": {
-                    "TipoDTE": int(TIPO_DTE_BOLETA),
+                    "TipoDTE": int(factura.tipo_dte),
                     "Folio": folio,
                     "FechaEmision": factura.fecha_emision.isoformat(),
                     "FechaVencimiento": factura.fecha_vencimiento.isoformat(),
@@ -98,15 +104,15 @@ def _construir_documento(factura: Factura, config: Configuracion, folio: int, pa
             },
             "Detalles": [
                 {
-                    "IndicadorExento": 0,
+                    "IndicadorExento": 1 if es_exento else 0,
                     "Nombre": f"Consumo de agua potable - período {factura.periodo}",
                     "Descripcion": f"Consumo {factura.consumo_m3} m3",
                     "Cantidad": 1.0,
                     "UnidadMedida": "un",
-                    "Precio": totales["MontoNeto"],
+                    "Precio": monto_item,
                     "Descuento": 0,
                     "Recargo": 0,
-                    "MontoItem": totales["MontoNeto"],
+                    "MontoItem": monto_item,
                 }
             ],
             "Referencias": [],
@@ -119,11 +125,17 @@ def _construir_documento(factura: Factura, config: Configuracion, folio: int, pa
     }
 
 
-def enviar_boleta_sii(db: Session, factura: Factura) -> dict:
+def enviar_documento_sii(db: Session, factura: Factura) -> dict:
     if not SIMPLEAPI_BASE_URL or not SIMPLEAPI_API_KEY:
         raise HTTPException(
             status_code=500,
             detail="Falta configurar SimpleAPI (SIMPLEAPI_BASE_URL / SIMPLEAPI_API_KEY)",
+        )
+
+    if not factura.tipo_dte:
+        raise HTTPException(
+            status_code=400,
+            detail="La factura no tiene tipo_dte asignado",
         )
 
     config = (
@@ -141,7 +153,7 @@ def enviar_boleta_sii(db: Session, factura: Factura) -> dict:
         )
 
     # Reserva el folio en memoria, sin confirmarlo aún en la BD.
-    folio, caf = caf_service.reservar_folio(db, factura.empresa_id, TIPO_DTE_BOLETA)
+    folio, caf = caf_service.reservar_folio(db, factura.empresa_id, factura.tipo_dte)
 
     certificado_pfx = descargar_archivo(BUCKET_CERTIFICADOS, config.certificado_pfx_path)
     caf_xml = descargar_archivo(BUCKET_CAF_SII, caf.archivo_xml)
@@ -174,7 +186,6 @@ def enviar_boleta_sii(db: Session, factura: Factura) -> dict:
     # Éxito: recién aquí se confirma el folio junto con el estado de la factura
     resultado = respuesta.json()
     factura.folio_sii = str(folio)
-    factura.tipo_dte = TIPO_DTE_BOLETA
     factura.estado_envio_sii = "enviado"
     db.commit()
 

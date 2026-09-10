@@ -8,7 +8,9 @@ from app.utils.caf_parser import parsear_caf
 
 
 def obtener_caf_activo(db: Session, empresa_id: int, tipo_dte: str) -> CafSii | None:
-    """Devuelve el CAF activo más antiguo con folios disponibles para ese tipo de documento."""
+    """Devuelve el CAF activo más antiguo con folios disponibles para ese tipo de documento.
+    Bloquea la fila (SELECT FOR UPDATE) para evitar que dos envíos concurrentes
+    tomen el mismo folio antes de que ninguno haga commit."""
     return (
         db.query(CafSii)
         .filter(
@@ -18,6 +20,7 @@ def obtener_caf_activo(db: Session, empresa_id: int, tipo_dte: str) -> CafSii | 
             CafSii.folio_actual <= CafSii.folio_hasta,
         )
         .order_by(CafSii.id.asc())
+        .with_for_update()
         .first()
     )
 

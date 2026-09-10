@@ -107,9 +107,10 @@ def enviar_factura_sii(
     if factura.estado_envio_sii == "enviado":
         raise HTTPException(status_code=400, detail="Esta factura ya fue enviada al SII")
 
-    resultado = sii_service.enviar_boleta_sii(db, factura)
+    resultado = sii_service.enviar_documento_sii(db, factura)
     return {
-        "mensaje": "Boleta enviada correctamente al SII",
+        "mensaje": "Documento enviado correctamente al SII",
         "folio": factura.folio_sii,
+        "tipo_dte": factura.tipo_dte,
         "respuesta_sii": resultado,
     }

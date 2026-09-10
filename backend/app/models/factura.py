@@ -56,7 +56,7 @@ class Factura(Base):
     
     # Estado de pago (se actualiza cuando llega un Pago asociado)
     estado = Column(String, nullable=False, default="pendiente")
-    # valores: "pendiente" | "parcial" | "pagada" | "vencida"
+    # valores: "pendiente" | "parcial" | "pagada" | "vencida" | "anulada"
     
 
     # Campos reservados para integración SII vía SimpleAPI (más adelante)
