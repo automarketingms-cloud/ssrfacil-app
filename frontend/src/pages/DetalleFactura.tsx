@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Download, ArrowLeft, AlertTriangle, Send } from "lucide-react";
+import { Download, ArrowLeft, AlertTriangle, Send, Ban } from "lucide-react";
 import {
   obtenerFactura,
   descargarFacturaPdf,
   enviarFacturaSii,
 } from "../api/facturas";
+import { anularFactura } from "../api/notasCredito";
+import { useAuth } from "../context/AuthContext";
 import type { Factura } from "../types";
 
 function formatearMonto(valor: number): string {
@@ -21,16 +23,23 @@ const ESTADO_STYLES: Record<string, string> = {
   pagada: "bg-success-soft text-success",
   vencida: "bg-danger-soft text-danger",
   parcial: "bg-amber-100 text-amber-700",
+  anulada: "bg-gray-200 text-gray-600",
 };
 
 export default function DetalleFactura() {
   const { id } = useParams<{ id: string }>();
+  const { usuario } = useAuth();
   const [factura, setFactura] = useState<Factura | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [enviandoSii, setEnviandoSii] = useState(false);
   const [errorSii, setErrorSii] = useState<string | null>(null);
+
+  const [mostrarModalAnular, setMostrarModalAnular] = useState(false);
+  const [motivoAnulacion, setMotivoAnulacion] = useState("");
+  const [anulando, setAnulando] = useState(false);
+  const [errorAnular, setErrorAnular] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -66,6 +75,28 @@ export default function DetalleFactura() {
     }
   }
 
+  async function handleAnular() {
+    if (!id) return;
+    if (!motivoAnulacion.trim()) {
+      setErrorAnular("Debe indicar un motivo");
+      return;
+    }
+    setErrorAnular(null);
+    try {
+      setAnulando(true);
+      await anularFactura(Number(id), { motivo: motivoAnulacion.trim() });
+      setMostrarModalAnular(false);
+      setMotivoAnulacion("");
+      cargarFactura();
+    } catch (err) {
+      setErrorAnular(
+        err instanceof Error ? err.message : "Error al anular la factura",
+      );
+    } finally {
+      setAnulando(false);
+    }
+  }
+
   if (loading)
     return <p className="text-sm text-muted p-4">Cargando factura...</p>;
 
@@ -86,6 +117,8 @@ export default function DetalleFactura() {
     f.iva;
 
   const yaEnviada = f.estado_envio_sii === "enviado";
+  const estaAnulada = f.estado === "anulada";
+  const puedeAnular = usuario?.rol === "admin";
 
   return (
     <div>
@@ -109,7 +142,7 @@ export default function DetalleFactura() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleEnviarSii}
-            disabled={enviandoSii || yaEnviada}
+            disabled={enviandoSii || yaEnviada || estaAnulada}
             className="flex items-center gap-2 bg-primary text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors cursor-pointer"
           >
             <Send size={16} />
@@ -126,10 +159,30 @@ export default function DetalleFactura() {
           >
             <Download size={16} /> Descargar PDF
           </button>
+
+          {puedeAnular && !estaAnulada && (
+            <button
+              onClick={() => setMostrarModalAnular(true)}
+              className="flex items-center gap-2 bg-danger text-white text-sm font-medium px-4 py-2 rounded-lg hover:opacity-90 transition-colors cursor-pointer"
+            >
+              <Ban size={16} /> Anular factura
+            </button>
+          )}
         </div>
       </div>
 
       {errorSii && <p className="text-sm text-danger mb-4">{errorSii}</p>}
+
+      {estaAnulada && (
+        <div className="bg-gray-100 border border-gray-300 rounded-xl p-4 mb-4 flex items-start gap-2">
+          <Ban size={16} className="text-gray-500 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-gray-700">
+              Esta factura fue anulada
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 mt-4">
         <div className="bg-surface border border-border rounded-xl p-4">
@@ -275,6 +328,61 @@ export default function DetalleFactura() {
                   Fecha límite antes de posible corte: {f.fecha_limite_corte}
                 </p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mostrarModalAnular && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-xl p-6 max-w-md w-full">
+            <h2 className="text-lg font-semibold text-text mb-2">
+              Anular factura N° {f.id}
+            </h2>
+            <p className="text-sm text-muted mb-4">
+              Esta acción genera una Nota de Crédito y no se puede deshacer. Si
+              la factura tenía pagos, la devolución se gestiona fuera del
+              sistema.
+            </p>
+
+            <label
+              htmlFor="motivo_anulacion"
+              className="text-sm font-medium text-text"
+            >
+              Motivo de anulación
+            </label>
+            <textarea
+              id="motivo_anulacion"
+              value={motivoAnulacion}
+              onChange={(e) => setMotivoAnulacion(e.target.value)}
+              rows={3}
+              className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-surface text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
+              placeholder="Ej: Error en el consumo registrado"
+            />
+
+            {errorAnular && (
+              <p className="text-sm text-danger mt-2">{errorAnular}</p>
+            )}
+
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => {
+                  setMostrarModalAnular(false);
+                  setMotivoAnulacion("");
+                  setErrorAnular(null);
+                }}
+                disabled={anulando}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-text border border-border hover:bg-bg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAnular}
+                disabled={anulando}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-danger hover:opacity-90 disabled:opacity-50 transition-colors"
+              >
+                {anulando ? "Anulando..." : "Confirmar anulación"}
+              </button>
             </div>
           </div>
         </div>

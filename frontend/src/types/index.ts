@@ -9,6 +9,9 @@ export interface Cliente {
   es_socio: boolean;
   tiene_subsidio: boolean;
   porcentaje_subsidio: number;
+  tipo_cliente: "persona_natural" | "persona_juridica" | null;
+  giro: string | null;
+  comuna: string | null;
 }
 
 export interface ClienteListResponse {
@@ -179,7 +182,7 @@ export interface Factura {
   total_a_pagar: number;
   fecha_emision: string;
   fecha_vencimiento: string;
-  estado: "pendiente" | "pagada" | "vencida" | "parcial";
+  estado: "pendiente" | "pagada" | "vencida" | "parcial" | "anulada";
   folio_sii: string | null;
   tipo_dte: string | null;
   estado_envio_sii: string | null;
@@ -634,4 +637,23 @@ export interface AlertaFolio {
   id: number;
   tipo_dte: string;
   folios_restantes: number;
+}
+
+export interface NotaCredito {
+  id: number;
+  empresa_id: number;
+  factura_id: number;
+  motivo: string;
+  fecha_emision: string;
+  anulado_por_id: number;
+  tipo_dte: string;
+  tipo_dte_referencia: string;
+  folio_referencia: string | null;
+  folio_sii: string | null;
+  estado_envio_sii: string | null;
+  creado_en: string;
+}
+
+export interface AnularFacturaData {
+  motivo: string;
 }

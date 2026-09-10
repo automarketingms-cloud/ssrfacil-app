@@ -11,6 +11,9 @@ const initialForm = {
   es_socio: true,
   tiene_subsidio: false,
   porcentaje_subsidio: 0,
+  tipo_cliente: "persona_natural" as "persona_natural" | "persona_juridica",
+  giro: "",
+  comuna: "",
 };
 
 export default function RegistrarCliente() {
@@ -62,6 +65,9 @@ export default function RegistrarCliente() {
         porcentaje_subsidio: form.tiene_subsidio
           ? form.porcentaje_subsidio / 100
           : 0,
+        tipo_cliente: form.tipo_cliente,
+        giro: form.giro || null,
+        comuna: form.comuna || null,
       });
       setSuccess(true);
       setForm(initialForm);
@@ -176,6 +182,55 @@ export default function RegistrarCliente() {
               />
             </div>
           )}
+        </div>
+
+        <div className="border-t border-border pt-4 flex flex-col gap-3">
+          <p className="text-sm font-medium text-text">
+            Datos para documentos SII
+          </p>
+
+          <div className="flex flex-col gap-1">
+            <label htmlFor="tipo_cliente" className="text-sm text-text">
+              Tipo de cliente
+            </label>
+            <select
+              id="tipo_cliente"
+              name="tipo_cliente"
+              value={form.tipo_cliente}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  tipo_cliente: e.target.value as
+                    | "persona_natural"
+                    | "persona_juridica",
+                }))
+              }
+              className="px-3 py-2 rounded-lg border border-border bg-surface text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
+            >
+              <option value="persona_natural">Persona natural (Boleta)</option>
+              <option value="persona_juridica">
+                Persona jurídica (Factura)
+              </option>
+            </select>
+          </div>
+
+          {form.tipo_cliente === "persona_juridica" && (
+            <Input
+              label="Giro"
+              name="giro"
+              value={form.giro}
+              onChange={handleChange}
+              placeholder="Agricultura, ganadería..."
+            />
+          )}
+
+          <Input
+            label="Comuna"
+            name="comuna"
+            value={form.comuna}
+            onChange={handleChange}
+            placeholder="Curicó"
+          />
         </div>
 
         {error && (

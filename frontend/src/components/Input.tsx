@@ -1,11 +1,11 @@
-interface InputProps {
+interface InputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "onChange"
+> {
   label: string;
   name: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  type?: string;
-  required?: boolean;
-  placeholder?: string;
   error?: string;
 }
 
@@ -18,6 +18,7 @@ export default function Input({
   required = false,
   placeholder,
   error,
+  ...rest
 }: InputProps) {
   return (
     <div className="flex flex-col gap-1">
@@ -35,6 +36,7 @@ export default function Input({
         className={`px-3 py-2 rounded-lg border bg-surface text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 ${
           error ? "border-red-400" : "border-border"
         }`}
+        {...rest}
       />
       {error && <span className="text-xs text-red-500">{error}</span>}
     </div>
