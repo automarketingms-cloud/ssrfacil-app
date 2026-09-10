@@ -14,7 +14,6 @@ import {
   obtenerCajaAbierta,
   cerrarCaja,
   arquearCaja,
-  obtenerPdfArqueo,
   obtenerResumenCaja,
   obtenerHistorialCajas,
 } from "../api/cajas";
@@ -60,7 +59,6 @@ export default function MiCaja() {
   const [arqueoAbiertoId, setArqueoAbiertoId] = useState<number | null>(null);
   const [observacionesArqueo, setObservacionesArqueo] = useState("");
   const [enviandoArqueo, setEnviandoArqueo] = useState(false);
-  const [cargandoPdfId, setCargandoPdfId] = useState<number | null>(null);
 
   async function cargarEstado() {
     setCargando(true);
@@ -422,14 +420,9 @@ export default function MiCaja() {
                         </span>
                         <button
                           onClick={() => handleVerDetalle(c.id)}
-                          disabled={cargandoPdfId === c.id}
-                          className="flex items-center gap-1 text-xs font-medium text-primary-dark hover:underline disabled:opacity-60"
+                          className="flex items-center gap-1 text-xs font-medium text-primary-dark hover:underline"
                         >
-                          {cargandoPdfId === c.id ? (
-                            <Loader2 size={13} className="animate-spin" />
-                          ) : (
-                            <FileText size={13} />
-                          )}
+                          <FileText size={13} />
                           Ver detalle
                         </button>
                       </>

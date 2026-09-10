@@ -269,7 +269,9 @@ export default function Dashboard() {
                 fontSize={12}
                 tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
               />
-              <Tooltip formatter={(v: number) => formatearMonto(v)} />
+              <Tooltip
+                formatter={(value) => formatearMonto(Number(value ?? 0))}
+              />
               <Legend />
               <Bar
                 dataKey="facturado"
