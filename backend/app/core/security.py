@@ -7,7 +7,7 @@ password_hash = PasswordHash.recommended()  # Argon2 por defecto
 
 SECRET_KEY = os.environ["JWT_SECRET_KEY"]  # agregar a tu .env, generar con: openssl rand -hex 32
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 12  # 12 horas
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 8  # 8 horas
 
 
 def hash_password(password: str) -> str:

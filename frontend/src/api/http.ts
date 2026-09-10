@@ -60,10 +60,16 @@ export async function apiFetch<T>(
   });
 
   if (response.status === 401) {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("usuario");
-    window.location.href = "/login";
-    throw new ApiError(401, "Sesión expirada");
+    if (!skipAuth) {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("usuario");
+      window.location.href = "/login";
+    }
+    const errorBody = await response.json().catch(() => ({}));
+    throw new ApiError(
+      401,
+      formatearErrorDetail(errorBody.detail) || "Sesión expirada",
+    );
   }
 
   if (!response.ok) {
