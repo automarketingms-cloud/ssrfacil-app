@@ -1,4 +1,3 @@
-// src/pages/Login.tsx
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
@@ -40,7 +39,7 @@ export default function Login() {
         className="bg-white rounded-lg shadow-md p-8 w-full max-w-sm"
       >
         <h1 className="text-2xl font-bold text-navy mb-6 text-center">
-          APR Fácil
+          SSR Fácil
         </h1>
 
         {error && (

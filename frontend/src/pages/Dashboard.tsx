@@ -161,7 +161,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPIs principales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
         <TarjetaKpi
           icon={Users}
           iconBg="bg-primary-light"
@@ -225,7 +225,7 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Acciones rápidas */}
         <div className="bg-surface border border-border rounded-xl p-4">
           <h2 className="text-sm font-semibold text-text mb-3">
@@ -251,7 +251,7 @@ export default function Dashboard() {
         </div>
 
         {/* Gráfico */}
-        <div className="bg-surface border border-border rounded-xl p-4 lg:col-span-2">
+        <div className="bg-surface border border-border rounded-xl p-4 md:col-span-2">
           <div className="flex items-center gap-2 mb-3">
             <BarChart3 size={16} className="text-primary-dark" />
             <h2 className="text-sm font-semibold text-text">
