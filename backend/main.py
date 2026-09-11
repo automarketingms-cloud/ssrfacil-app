@@ -16,7 +16,7 @@ app = FastAPI()
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 
-origins = ["http://localhost:5173"]
+origins = ["http://localhost:5173", "http://localhost:4173"]
 if FRONTEND_URL:
     origins.append(FRONTEND_URL)
 
