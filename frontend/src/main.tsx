@@ -4,14 +4,15 @@ import "./index.css";
 import App from "./App.tsx";
 import { registerSW } from "virtual:pwa-register";
 
-registerSW({
+const updateSW = registerSW({
   onNeedRefresh() {
     if (
       confirm(
         "Hay una nueva versión de ssrFacil disponible. ¿Actualizar ahora?",
       )
     ) {
-      window.location.reload();
+      // Activa el service worker nuevo y recarga cuando ya tomó el control
+      updateSW(true);
     }
   },
   onOfflineReady() {
