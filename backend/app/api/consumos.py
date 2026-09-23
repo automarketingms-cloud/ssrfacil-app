@@ -12,7 +12,6 @@ from app.services.calculo_tarifa import (
     obtener_tarifa_vigente,
     calcular_total_a_pagar,
 )
-from app.services.configuracion import obtener_configuracion
 
 router = APIRouter(prefix="/consumos", tags=["Consumos"])
 
@@ -48,8 +47,7 @@ def obtener_consumo_y_cobro(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    config = obtener_configuracion(db, current_user.empresa_id)
-    desglose = calcular_total_a_pagar(consumo, tarifa, cliente, config.tasa_iva)
+    desglose = calcular_total_a_pagar(consumo, tarifa, cliente)
 
     return {
         "cliente_id": cliente.id,
@@ -85,8 +83,6 @@ def resumen_mensual(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    config = obtener_configuracion(db, current_user.empresa_id)
-
     resultado = []
     for lectura in lecturas:
         cliente = (
@@ -99,7 +95,7 @@ def resumen_mensual(
 
         lectura_anterior = obtener_lectura_anterior(db, lectura.cliente_id, periodo)
         consumo = calcular_consumo(lectura.lectura_actual, lectura_anterior)
-        desglose = calcular_total_a_pagar(consumo, tarifa, cliente, config.tasa_iva)
+        desglose = calcular_total_a_pagar(consumo, tarifa, cliente)
 
         resultado.append({
             "cliente_id": cliente.id,

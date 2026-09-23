@@ -270,7 +270,6 @@ export interface Configuracion {
   dias_plazo_pago: number;
   dia_facturacion: number;
   tasa_interes_mora: number;
-  tasa_iva: number;
   numero_medidor_matriz: string;
   comuna: string | null;
   actividad_economica: number[] | null;
@@ -288,7 +287,6 @@ export interface ConfiguracionUpdate {
   dias_plazo_pago?: number;
   dia_facturacion?: number;
   tasa_interes_mora?: number;
-  tasa_iva?: number;
   numero_medidor_matriz?: string;
   comuna?: string | null;
   actividad_economica?: number[] | null;

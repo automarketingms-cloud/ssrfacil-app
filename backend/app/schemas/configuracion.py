@@ -17,7 +17,6 @@ class ConfiguracionBase(BaseModel):
     dias_plazo_pago: int = Field(default=30, gt=0)
     dia_facturacion: int = Field(default=20, ge=1, le=31)
     tasa_interes_mora: float = Field(default=0, ge=0)
-    tasa_iva: float = Field(default=19.0, ge=0)
     numero_medidor_matriz: Optional[str] = None
 
     @field_validator("rut_empresa")

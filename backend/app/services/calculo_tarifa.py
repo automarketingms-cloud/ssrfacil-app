@@ -5,6 +5,8 @@ from app.models.cliente import Cliente
 
 from datetime import date
 
+# IVA vigente en Chile (DL 825). Si cambia por ley, se ajusta solo aquí.
+TASA_IVA = 19.0
 
 def obtener_lectura_anterior(db: Session, cliente_id: int, periodo_actual: str) -> float:
     """
@@ -141,7 +143,7 @@ def calcular_consumo_por_tramos(consumo_m3: float, tramos: list[TarifaTramo]) ->
 
 
 def calcular_total_a_pagar(
-    consumo_m3: float, tarifa: Tarifa, cliente: Cliente, tasa_iva: float
+    consumo_m3: float, tarifa: Tarifa, cliente: Cliente
 ) -> dict:
     """
     Calcula el desglose de cobro: cargo fijo + variable por tramos +
@@ -149,7 +151,7 @@ def calcular_total_a_pagar(
     ...
     El IVA se aplica sobre el NETO (cargo_fijo + monto_variable +
     cargo_fondo_reposicion - subsidio), solo a clientes que no son socios.
-    tasa_iva viene de Configuracion, en porcentaje (ej. 19.0 = 19%).
+    El IVA se toma de la constante TASA_IVA (en porcentaje, ej. 19.0 = 19%).
     """
     detalle_tramos = calcular_consumo_por_tramos(consumo_m3, tarifa.tramos)
     monto_variable = round(sum(t["subtotal"] for t in detalle_tramos), 2)
@@ -171,7 +173,7 @@ def calcular_total_a_pagar(
 
     iva_monto = 0.0
     if not cliente.es_socio:
-        iva_monto = round(subtotal_neto * (tasa_iva / 100), 2)
+        iva_monto = round(subtotal_neto * (TASA_IVA / 100), 2)
 
     total = subtotal_neto + iva_monto
 

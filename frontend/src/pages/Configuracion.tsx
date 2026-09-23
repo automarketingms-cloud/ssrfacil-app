@@ -62,7 +62,6 @@ export default function Configuracion() {
         dias_plazo_pago: data.dias_plazo_pago,
         dia_facturacion: data.dia_facturacion,
         tasa_interes_mora: data.tasa_interes_mora,
-        tasa_iva: data.tasa_iva,
       });
       setActividadEconomicaTexto((data.actividad_economica ?? []).join(", "));
       setCertificadoCargado(data.certificado_pfx_path);
@@ -376,10 +375,7 @@ export default function Configuracion() {
                 }
               />
             </div>
-          </div>
-          <section className="bg-surface border border-border rounded-lg p-6 space-y-4">
-            <h2 className="text-sm font-semibold text-text">Tasas</h2>
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-sm text-muted mb-1">
                 Tasa de interés anual por mora (%)
               </label>
@@ -398,25 +394,7 @@ export default function Configuracion() {
                 (actualízala manualmente cuando cambie).
               </p>
             </div>
-            <div>
-              <label className="block text-sm text-muted mb-1">
-                Tasa de IVA (%)
-              </label>
-              <input
-                type="number"
-                min={0}
-                step={0.01}
-                className="w-full border border-border rounded-md px-3 py-2"
-                value={form.tasa_iva ?? ""}
-                onChange={(e) =>
-                  handleChange("tasa_iva", Number(e.target.value))
-                }
-              />
-              <p className="text-xs text-muted mt-1">
-                Se aplica solo a clientes no socios, sobre el neto a pagar.
-              </p>
-            </div>
-          </section>
+          </div>
         </section>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

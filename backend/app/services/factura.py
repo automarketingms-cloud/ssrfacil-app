@@ -76,7 +76,7 @@ def generar_factura(db: Session, cliente_id: int, periodo: str, empresa_id: int)
 
     config = obtener_configuracion(db, empresa_id)
 
-    desglose = calcular_total_a_pagar(consumo_a_facturar, tarifa, cliente, config.tasa_iva)
+    desglose = calcular_total_a_pagar(consumo_a_facturar, tarifa, cliente)
 
     fecha_emision = date.today()
     fecha_vencimiento = fecha_emision + timedelta(days=config.dias_plazo_pago)
@@ -613,7 +613,6 @@ def construir_reporte_facturacion(periodo: str, db: Session, empresa_id: int) ->
 
     tarifa = obtener_tarifa_vigente(db, periodo, empresa_id)
     config = obtener_configuracion(db, empresa_id)
-    # ... el resto de la función sigue exactamente igual ...
 
     cliente_ids = [f.cliente_id for f in facturas]
 
@@ -848,7 +847,7 @@ def construir_pdf_reporte_facturacion(periodo: str, db: Session, empresa_id: int
     tabla = Table(data, repeatRows=1)
     tabla.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4472C4")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("FONTSIZE", (0, 0), (-1, -1), 8),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
