@@ -227,6 +227,7 @@ export default function IngresarLectura() {
             ref={fotoInputRef}
             type="file"
             accept="image/*"
+            capture="environment"
             onChange={handleFotoChange}
             className="block w-full text-sm text-text file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary-light file:text-primary-dark file:font-medium hover:file:bg-primary-light/70"
           />
