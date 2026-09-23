@@ -3,23 +3,34 @@ import { useNavigate } from "react-router-dom";
 import { crearTarifa } from "../api/tarifas";
 import type { TarifaTramo } from "../types";
 import { formatoCLP } from "../utils/formato";
+import { aNumeroOVacio } from "../utils/numero";
 import ConfirmDialog from "../components/ConfirmDialog";
 
-const tramoVacio = (numero: number, desde: number): TarifaTramo => ({
+// Igual que TarifaTramo, pero permite campos vacíos mientras se edita
+type TramoForm = {
+  numero_tramo: number;
+  desde_m3: number | undefined;
+  hasta_m3: number | null;
+  precio_m3: number | undefined;
+};
+
+const tramoVacio = (numero: number, desde: number | undefined): TramoForm => ({
   numero_tramo: numero,
   desde_m3: desde,
   hasta_m3: null,
-  precio_m3: 0,
+  precio_m3: undefined,
 });
 
 export default function CrearTarifa() {
   const navigate = useNavigate();
 
   const [nombre, setNombre] = useState("");
-  const [cargoFijo, setCargoFijo] = useState(0);
-  const [valorFondoReposicion, setValorFondoReposicion] = useState(0);
+  const [cargoFijo, setCargoFijo] = useState<number | undefined>(undefined);
+  const [valorFondoReposicion, setValorFondoReposicion] = useState<
+    number | undefined
+  >(undefined);
   const [vigenteDesde, setVigenteDesde] = useState("");
-  const [tramos, setTramos] = useState<TarifaTramo[]>([tramoVacio(1, 1)]);
+  const [tramos, setTramos] = useState<TramoForm[]>([tramoVacio(1, 1)]);
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +38,7 @@ export default function CrearTarifa() {
 
   function handleTramoChange(
     index: number,
-    campo: keyof TarifaTramo,
+    campo: "desde_m3" | "hasta_m3" | "precio_m3",
     valor: string,
   ) {
     setTramos((prev) => {
@@ -36,7 +47,7 @@ export default function CrearTarifa() {
         if (campo === "hasta_m3") {
           return { ...t, hasta_m3: valor === "" ? null : Number(valor) };
         }
-        return { ...t, [campo]: Number(valor) };
+        return { ...t, [campo]: aNumeroOVacio(valor) };
       });
 
       if (campo === "hasta_m3" && actualizados[index + 1]) {
@@ -57,7 +68,7 @@ export default function CrearTarifa() {
     setTramos((prev) => {
       const anterior = prev[prev.length - 1];
       const desdeSugerido =
-        anterior.hasta_m3 !== null ? anterior.hasta_m3 + 1 : 0;
+        anterior.hasta_m3 !== null ? anterior.hasta_m3 + 1 : undefined;
       return [...prev, tramoVacio(prev.length + 1, desdeSugerido)];
     });
   }
@@ -90,12 +101,19 @@ export default function CrearTarifa() {
     setGuardando(true);
     setError(null);
     try {
+      const tramosFinales: TarifaTramo[] = tramos.map((t) => ({
+        numero_tramo: t.numero_tramo,
+        desde_m3: t.desde_m3 ?? 0,
+        hasta_m3: t.hasta_m3,
+        precio_m3: t.precio_m3 ?? 0,
+      }));
+
       await crearTarifa({
         nombre,
-        cargo_fijo: cargoFijo,
-        valor_fondo_reposicion: valorFondoReposicion,
+        cargo_fijo: cargoFijo ?? 0,
+        valor_fondo_reposicion: valorFondoReposicion ?? 0,
         vigente_desde: vigenteDesde,
-        tramos,
+        tramos: tramosFinales,
       });
       navigate("/tarifas");
     } catch (err) {
@@ -146,8 +164,9 @@ export default function CrearTarifa() {
               type="number"
               step="1"
               min="0"
-              value={cargoFijo}
-              onChange={(e) => setCargoFijo(Number(e.target.value))}
+              value={cargoFijo ?? ""}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setCargoFijo(aNumeroOVacio(e.target.value))}
               required
               className="w-full px-3 py-2 rounded-lg border border-border bg-white text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
@@ -161,8 +180,11 @@ export default function CrearTarifa() {
               type="number"
               step="0.01"
               min="0"
-              value={valorFondoReposicion}
-              onChange={(e) => setValorFondoReposicion(Number(e.target.value))}
+              value={valorFondoReposicion ?? ""}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) =>
+                setValorFondoReposicion(aNumeroOVacio(e.target.value))
+              }
               required
               className="w-full px-3 py-2 rounded-lg border border-border bg-white text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
@@ -213,7 +235,8 @@ export default function CrearTarifa() {
                   <input
                     type="number"
                     min="0"
-                    value={tramo.desde_m3}
+                    value={tramo.desde_m3 ?? ""}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) =>
                       handleTramoChange(index, "desde_m3", e.target.value)
                     }
@@ -231,6 +254,7 @@ export default function CrearTarifa() {
                     type="number"
                     min="0"
                     value={tramo.hasta_m3 ?? ""}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) =>
                       handleTramoChange(index, "hasta_m3", e.target.value)
                     }
@@ -246,7 +270,8 @@ export default function CrearTarifa() {
                     type="number"
                     step="0.01"
                     min="0"
-                    value={tramo.precio_m3}
+                    value={tramo.precio_m3 ?? ""}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) =>
                       handleTramoChange(index, "precio_m3", e.target.value)
                     }
@@ -268,19 +293,19 @@ export default function CrearTarifa() {
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="flex items-center gap-3 pt-2">
+          <button
+            type="submit"
+            className="border border-primary bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
+          >
+            Guardar tarifa
+          </button>
           <button
             type="button"
             onClick={() => navigate("/tarifas")}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-gray-100 transition-colors"
+            className="border border-border bg-white hover:bg-gray-100 text-text text-sm font-medium rounded-lg px-4 py-2 transition-colors"
           >
             Cancelar
-          </button>
-          <button
-            type="submit"
-            className="bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
-          >
-            Guardar tarifa
           </button>
         </div>
       </form>
@@ -303,13 +328,13 @@ export default function CrearTarifa() {
             <div className="flex justify-between">
               <span className="text-muted">Cargo fijo</span>
               <span className="font-medium text-text">
-                {formatoCLP(cargoFijo)}
+                {formatoCLP(cargoFijo ?? 0)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted">Fondo de reposición</span>
               <span className="font-medium text-text">
-                {formatoCLP(valorFondoReposicion)} / m³
+                {formatoCLP(valorFondoReposicion ?? 0)} / m³
               </span>
             </div>
             <div className="flex justify-between">
@@ -330,7 +355,7 @@ export default function CrearTarifa() {
                       m³
                     </span>
                     <span className="font-medium text-text">
-                      {formatoCLP(t.precio_m3)} / m³
+                      {formatoCLP(t.precio_m3 ?? 0)} / m³
                     </span>
                   </div>
                 ))}

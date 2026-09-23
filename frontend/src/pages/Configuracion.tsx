@@ -11,6 +11,7 @@ import {
 import { subirCertificado } from "../api/certificado";
 import { subirCaf, listarCafs } from "../api/caf";
 import { formatearRut, validarRut } from "../utils/rut";
+import { aNumeroOVacio } from "../utils/numero";
 
 export default function Configuracion() {
   const [form, setForm] = useState<ConfiguracionUpdate>({});
@@ -88,7 +89,7 @@ export default function Configuracion() {
 
   function handleChange(
     campo: keyof ConfiguracionUpdate,
-    valor: string | number,
+    valor: string | number | undefined,
   ) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
     setExito(false);
@@ -128,6 +129,17 @@ export default function Configuracion() {
     e.preventDefault();
     setError(null);
     setExito(false);
+
+    if (
+      form.dias_plazo_pago === undefined ||
+      form.dia_facturacion === undefined ||
+      form.tasa_interes_mora === undefined
+    ) {
+      setError(
+        "Completa el plazo de pago, el día de facturación y la tasa de mora",
+      );
+      return;
+    }
 
     if (form.rut_empresa && !validarRut(form.rut_empresa)) {
       setRutError("RUT inválido");
@@ -355,8 +367,9 @@ export default function Configuracion() {
                 min={1}
                 className="w-full border border-border rounded-md px-3 py-2"
                 value={form.dias_plazo_pago ?? ""}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) =>
-                  handleChange("dias_plazo_pago", Number(e.target.value))
+                  handleChange("dias_plazo_pago", aNumeroOVacio(e.target.value))
                 }
               />
             </div>
@@ -370,8 +383,9 @@ export default function Configuracion() {
                 max={31}
                 className="w-full border border-border rounded-md px-3 py-2"
                 value={form.dia_facturacion ?? ""}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) =>
-                  handleChange("dia_facturacion", Number(e.target.value))
+                  handleChange("dia_facturacion", aNumeroOVacio(e.target.value))
                 }
               />
             </div>
@@ -385,8 +399,12 @@ export default function Configuracion() {
                 step={0.01}
                 className="w-full border border-border rounded-md px-3 py-2"
                 value={form.tasa_interes_mora ?? ""}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) =>
-                  handleChange("tasa_interes_mora", Number(e.target.value))
+                  handleChange(
+                    "tasa_interes_mora",
+                    aNumeroOVacio(e.target.value),
+                  )
                 }
               />
               <p className="text-xs text-muted mt-1">

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Input from "../components/Input";
 import ClienteCombobox from "../components/ClienteCombobox";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { listarClientes } from "../api/clientes";
 import { crearLectura, crearLecturaTerminoMedio } from "../api/lecturas";
 import type { Cliente } from "../types";
@@ -15,6 +16,8 @@ const initialForm = {
   lectura_actual: "",
 };
 
+type TipoConfirmacion = "lectura" | "termino_medio" | null;
+
 export default function IngresarLectura() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [form, setForm] = useState(initialForm);
@@ -25,6 +28,12 @@ export default function IngresarLectura() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loadingTerminoMedio, setLoadingTerminoMedio] = useState(false);
+  const [confirmacion, setConfirmacion] = useState<TipoConfirmacion>(null);
+  const fotoInputRef = useRef<HTMLInputElement>(null);
+
+  const clienteSeleccionado = clientes.find(
+    (c) => String(c.id) === form.cliente_id,
+  );
 
   useEffect(() => {
     listarClientes({ activo: true, limit: 1000 })
@@ -55,24 +64,67 @@ export default function IngresarLectura() {
     setFotoPreview(archivo ? URL.createObjectURL(archivo) : null);
   }
 
-  function limpiarFormulario() {
-    setForm({ ...initialForm, cliente_id: "" });
+  function quitarFoto() {
     if (fotoPreview) URL.revokeObjectURL(fotoPreview);
     setFoto(null);
     setFotoPreview(null);
+    if (fotoInputRef.current) fotoInputRef.current.value = "";
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function limpiarFormulario() {
+    setForm({ ...initialForm, cliente_id: "" });
+    quitarFoto();
+  }
+
+  // --- Paso 1: validar y abrir el diálogo ---
+
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
+    setSuccess(false);
+
+    if (!form.cliente_id) {
+      setError("Selecciona un cliente");
+      return;
+    }
 
     if (!foto) {
       setError("Debes tomar una foto del medidor para registrar la lectura");
       return;
     }
 
-    setLoading(true);
+    setConfirmacion("lectura");
+  }
+
+  function handleTerminoMedio() {
     setError(null);
     setSuccess(false);
+
+    if (!form.cliente_id || !form.periodo || !form.fecha_lectura) {
+      setError(
+        "Selecciona cliente, período y fecha antes de usar término medio",
+      );
+      return;
+    }
+
+    if (form.lectura_actual !== "" || foto) {
+      setError(
+        'Ingresaste una lectura o una foto. Si pudiste leer el medidor, usa "Registrar lectura". ' +
+          "Si realmente no se pudo leer, borra la lectura y la foto antes de usar término medio.",
+      );
+      return;
+    }
+
+    setConfirmacion("termino_medio");
+  }
+
+  // --- Paso 2: guardar al confirmar ---
+
+  async function confirmarLectura() {
+    if (!foto) return;
+
+    setLoading(true);
+    setError(null);
 
     try {
       await crearLectura({
@@ -83,25 +135,19 @@ export default function IngresarLectura() {
         foto,
       });
       setSuccess(true);
+      setConfirmacion(null);
       limpiarFormulario();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado");
+      setConfirmacion(null);
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleTerminoMedio() {
-    if (!form.cliente_id || !form.periodo || !form.fecha_lectura) {
-      setError(
-        "Selecciona cliente, período y fecha antes de usar término medio",
-      );
-      return;
-    }
-
+  async function confirmarTerminoMedio() {
     setLoadingTerminoMedio(true);
     setError(null);
-    setSuccess(false);
 
     try {
       await crearLecturaTerminoMedio({
@@ -110,9 +156,11 @@ export default function IngresarLectura() {
         fecha_lectura: form.fecha_lectura,
       });
       setSuccess(true);
+      setConfirmacion(null);
       limpiarFormulario();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado");
+      setConfirmacion(null);
     } finally {
       setLoadingTerminoMedio(false);
     }
@@ -176,18 +224,27 @@ export default function IngresarLectura() {
             medio).
           </p>
           <input
+            ref={fotoInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             onChange={handleFotoChange}
             className="block w-full text-sm text-text file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary-light file:text-primary-dark file:font-medium hover:file:bg-primary-light/70"
           />
           {fotoPreview && (
-            <img
-              src={fotoPreview}
-              alt="Vista previa de la foto del medidor"
-              className="mt-3 w-40 h-40 object-cover rounded-lg border border-border"
-            />
+            <div className="mt-3 flex items-end gap-3">
+              <img
+                src={fotoPreview}
+                alt="Vista previa de la foto del medidor"
+                className="w-40 h-40 object-cover rounded-lg border border-border"
+              />
+              <button
+                type="button"
+                onClick={quitarFoto}
+                className="text-sm text-red-600 hover:underline"
+              >
+                Quitar foto
+              </button>
+            </div>
           )}
         </div>
 
@@ -224,6 +281,95 @@ export default function IngresarLectura() {
           </button>
         </div>
       </form>
+
+      {confirmacion === "lectura" && (
+        <ConfirmDialog
+          title="¿Confirmas registrar esta lectura?"
+          description="Revisa los datos antes de guardar. La lectura se usará para calcular el consumo y la factura del período."
+          confirmLabel="Sí, registrar lectura"
+          cancelLabel="Revisar de nuevo"
+          loading={loading}
+          error={error}
+          onConfirm={confirmarLectura}
+          onCancel={() => setConfirmacion(null)}
+        >
+          <div className="bg-bg border border-border rounded-lg p-4 space-y-3 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-muted">Cliente</span>
+              <span className="font-medium text-text text-right">
+                {clienteSeleccionado?.nombre ?? "—"}
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted">N° medidor</span>
+              <span className="font-medium text-text">
+                {clienteSeleccionado?.numero_medidor ?? "—"}
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted">Período</span>
+              <span className="font-medium text-text">{form.periodo}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted">Fecha de lectura</span>
+              <span className="font-medium text-text">
+                {form.fecha_lectura}
+              </span>
+            </div>
+            <div className="flex justify-between gap-4 border-t border-border pt-3">
+              <span className="text-muted">Lectura actual</span>
+              <span className="font-semibold text-text">
+                {form.lectura_actual} m³
+              </span>
+            </div>
+            {fotoPreview && (
+              <img
+                src={fotoPreview}
+                alt="Foto del medidor"
+                className="w-24 h-24 object-cover rounded-lg border border-border"
+              />
+            )}
+          </div>
+        </ConfirmDialog>
+      )}
+
+      {confirmacion === "termino_medio" && (
+        <ConfirmDialog
+          title="¿Confirmas usar término medio?"
+          description="No se registrará una lectura real. Se facturará el consumo promedio de los últimos meses con lectura real, y la diferencia se ajustará cuando vuelva a leerse el medidor."
+          confirmLabel="Sí, usar término medio"
+          cancelLabel="Cancelar"
+          loading={loadingTerminoMedio}
+          error={error}
+          onConfirm={confirmarTerminoMedio}
+          onCancel={() => setConfirmacion(null)}
+        >
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-muted">Cliente</span>
+              <span className="font-medium text-text text-right">
+                {clienteSeleccionado?.nombre ?? "—"}
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted">N° medidor</span>
+              <span className="font-medium text-text">
+                {clienteSeleccionado?.numero_medidor ?? "—"}
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted">Período</span>
+              <span className="font-medium text-text">{form.periodo}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted">Fecha</span>
+              <span className="font-medium text-text">
+                {form.fecha_lectura}
+              </span>
+            </div>
+          </div>
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

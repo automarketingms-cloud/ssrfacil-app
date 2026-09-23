@@ -2,6 +2,7 @@ import { useState } from "react";
 import Input from "../components/Input";
 import { crearCliente } from "../api/clientes";
 import { formatearRut, validarRut } from "../utils/rut";
+import { aNumeroOVacio } from "../utils/numero";
 
 const initialForm = {
   nombre: "",
@@ -10,7 +11,7 @@ const initialForm = {
   numero_medidor: "",
   es_socio: true,
   tiene_subsidio: false,
-  porcentaje_subsidio: 0,
+  porcentaje_subsidio: undefined as number | undefined,
   tipo_cliente: "persona_natural" as "persona_natural" | "persona_juridica",
   giro: "",
   comuna: "",
@@ -63,7 +64,7 @@ export default function RegistrarCliente() {
         es_socio: form.es_socio,
         tiene_subsidio: form.tiene_subsidio,
         porcentaje_subsidio: form.tiene_subsidio
-          ? form.porcentaje_subsidio / 100
+          ? (form.porcentaje_subsidio ?? 0) / 100
           : 0,
         tipo_cliente: form.tipo_cliente,
         giro: form.giro || null,
@@ -171,11 +172,13 @@ export default function RegistrarCliente() {
                 min={0}
                 max={100}
                 step={1}
-                value={form.porcentaje_subsidio}
+                required
+                value={form.porcentaje_subsidio ?? ""}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) =>
                   setForm((prev) => ({
                     ...prev,
-                    porcentaje_subsidio: Number(e.target.value),
+                    porcentaje_subsidio: aNumeroOVacio(e.target.value),
                   }))
                 }
                 className="px-3 py-2 rounded-lg border border-border bg-surface text-text focus:outline-none focus:ring-2 focus:ring-primary/40 w-32"

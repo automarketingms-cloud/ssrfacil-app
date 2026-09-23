@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { obtenerCliente, actualizarCliente } from "../api/clientes";
 import { formatearRut, validarRut } from "../utils/rut";
+import { aNumeroOVacio } from "../utils/numero";
 import type { Cliente } from "../types";
 
 export default function EditarCliente() {
@@ -9,6 +10,9 @@ export default function EditarCliente() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState<Partial<Cliente>>({});
+  const [porcentajeSubsidio, setPorcentajeSubsidio] = useState<
+    number | undefined
+  >(undefined);
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +21,15 @@ export default function EditarCliente() {
   useEffect(() => {
     if (!id) return;
     obtenerCliente(Number(id))
-      .then((cliente) => setForm(cliente))
+      .then((cliente) => {
+        setForm(cliente);
+        // En la BD se guarda como fracción (0.5); en pantalla se muestra en % (50)
+        setPorcentajeSubsidio(
+          cliente.porcentaje_subsidio
+            ? Math.round(cliente.porcentaje_subsidio * 100)
+            : undefined,
+        );
+      })
       .catch(() => setError("No se pudo cargar el cliente"))
       .finally(() => setLoading(false));
   }, [id]);
@@ -30,12 +42,7 @@ export default function EditarCliente() {
 
     setForm((prev) => ({
       ...prev,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : name === "porcentaje_subsidio"
-            ? Number(value)
-            : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   }
 
@@ -64,7 +71,12 @@ export default function EditarCliente() {
     setGuardando(true);
     setError(null);
     try {
-      await actualizarCliente(Number(id), form);
+      await actualizarCliente(Number(id), {
+        ...form,
+        porcentaje_subsidio: form.tiene_subsidio
+          ? (porcentajeSubsidio ?? 0) / 100
+          : 0,
+      });
       navigate("/clientes");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado");
@@ -179,33 +191,36 @@ export default function EditarCliente() {
         {form.tiene_subsidio && (
           <div>
             <label className="block text-sm font-medium text-text mb-1">
-              Porcentaje de subsidio (ej: 0.5 = 50%)
+              Porcentaje de subsidio (%)
             </label>
             <input
               type="number"
-              step="0.01"
-              min="0"
-              max="1"
-              name="porcentaje_subsidio"
-              value={form.porcentaje_subsidio ?? 0}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-white text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              min={0}
+              max={100}
+              step={1}
+              required
+              value={porcentajeSubsidio ?? ""}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) =>
+                setPorcentajeSubsidio(aNumeroOVacio(e.target.value))
+              }
+              className="w-32 px-3 py-2 rounded-lg border border-border bg-white text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-4">
+        <div className="flex items-center gap-3 pt-4">
           <button
             type="button"
             onClick={() => navigate("/clientes")}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-gray-100 transition-colors"
+            className="flex-1 border border-border bg-white text-text text-sm font-medium rounded-lg px-4 py-2 hover:bg-gray-100 transition-colors"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={guardando}
-            className="bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
+            className="flex-1 border border-primary bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
           >
             {guardando ? "Guardando..." : "Guardar cambios"}
           </button>
