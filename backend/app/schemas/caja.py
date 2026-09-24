@@ -23,7 +23,7 @@ class CajaResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    cajero_id: int
+    cajero_id: int | None = None
     fecha_apertura: datetime
     monto_inicial: float
     monto_inicial_original: float | None = None

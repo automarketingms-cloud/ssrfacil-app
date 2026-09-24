@@ -546,7 +546,7 @@ export interface CajaArqueoCreate {
 
 export interface Caja {
   id: number;
-  cajero_id: number;
+  cajero_id: number | null;
   fecha_apertura: string;
   monto_inicial: number;
   monto_inicial_original: number | null;
