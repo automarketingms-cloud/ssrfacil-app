@@ -85,6 +85,29 @@ def mi_perfil(usuario_actual: Usuario = Depends(get_current_user)):
     return usuario_actual
 
 
+# Debe ir DESPUÉS de GET /me: si no, FastAPI intentaría interpretar "me" como usuario_id
+@router.get("/{usuario_id}", response_model=UsuarioOut)
+def obtener_usuario(
+    usuario_id: int,
+    db: Session = Depends(get_db),
+    usuario_actual: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.SUPER_ADMIN)),
+):
+    query = db.query(Usuario).filter(Usuario.id == usuario_id)
+
+    # Mismas reglas que el listado: admin solo ve usuarios de su empresa
+    # y nunca a otros admin ni super_admin
+    if usuario_actual.rol != RolUsuario.SUPER_ADMIN:
+        query = query.filter(
+            Usuario.empresa_id == usuario_actual.empresa_id,
+            Usuario.rol.notin_([RolUsuario.SUPER_ADMIN, RolUsuario.ADMIN]),
+        )
+
+    usuario = query.first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return usuario
+
+
 @router.patch("/me/password", status_code=status.HTTP_204_NO_CONTENT)
 def cambiar_mi_password(
     data: CambioPasswordRequest,
@@ -128,6 +151,15 @@ def editar_usuario(
                 status_code=403,
                 detail="Como admin solo puedes asignar el rol oficina o terreno",
             )
+
+    if "email" in update_data and update_data["email"] != usuario.email:
+        existe = (
+            db.query(Usuario)
+            .filter(Usuario.email == update_data["email"], Usuario.id != usuario.id)
+            .first()
+        )
+        if existe:
+            raise HTTPException(status_code=400, detail="Ya existe un usuario con ese email")
 
     if "password" in update_data:
         update_data["password_hash"] = hash_password(update_data.pop("password"))

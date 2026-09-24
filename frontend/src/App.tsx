@@ -33,7 +33,9 @@ import HistorialLecturaMatriz from "./pages/HistorialLecturaMatriz";
 import Login from "./pages/Login";
 import { AuthProvider } from "./context/AuthContext";
 import RutaProtegida from "./components/RutaProtegida";
-import GestionUsuarios from "./pages/GestionUsuarios";
+import ListarUsuarios from "./pages/ListarUsuarios";
+import RegistrarUsuario from "./pages/RegistrarUsuario";
+import EditarUsuario from "./pages/EditarUsuario";
 import CrearEmpresa from "./pages/CrearEmpresa";
 import MiPerfil from "./pages/MiPerfil";
 import ReporteClientesSubsidio from "./pages/ReporteClientesSubsidio";
@@ -259,7 +261,23 @@ export default function App() {
               path="/usuarios"
               element={
                 <RutaProtegida rolesPermitidos={["admin", "super_admin"]}>
-                  <GestionUsuarios />
+                  <ListarUsuarios />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/usuarios/nuevo"
+              element={
+                <RutaProtegida rolesPermitidos={["admin", "super_admin"]}>
+                  <RegistrarUsuario />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/usuarios/:id/editar"
+              element={
+                <RutaProtegida rolesPermitidos={["admin", "super_admin"]}>
+                  <EditarUsuario />
                 </RutaProtegida>
               }
             />

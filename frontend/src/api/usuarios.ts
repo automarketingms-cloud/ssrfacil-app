@@ -6,6 +6,10 @@ export async function listarUsuarios(empresaId?: number): Promise<Usuario[]> {
   return apiFetch<Usuario[]>(`/usuarios/${query}`);
 }
 
+export async function obtenerUsuario(id: number): Promise<Usuario> {
+  return apiFetch<Usuario>(`/usuarios/${id}`);
+}
+
 export async function crearUsuario(data: UsuarioCreateData): Promise<Usuario> {
   return apiFetch<Usuario>("/usuarios/", {
     method: "POST",

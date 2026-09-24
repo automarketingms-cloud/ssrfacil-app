@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Download, AlertTriangle, Send, Ban } from "lucide-react";
 import {
   obtenerFactura,
