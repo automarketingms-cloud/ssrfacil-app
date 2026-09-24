@@ -11,6 +11,7 @@ import {
   Gauge,
   BarChart3,
   FileText,
+  Receipt,
 } from "lucide-react";
 import {
   BarChart,
@@ -103,6 +104,11 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const lecturasSinFacturar = Math.max(
+    resumen.lecturas_realizadas - resumen.lecturas_facturadas,
+    0,
+  );
 
   const datosGrafico = resumen.facturacion_ultimos_6_meses.map((m) => ({
     periodo: formatearPeriodo(m.periodo),
@@ -202,7 +208,21 @@ export default function Dashboard() {
       </div>
 
       {/* KPIs secundarios */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <TarjetaKpi
+          icon={Receipt}
+          iconBg={lecturasSinFacturar > 0 ? "bg-amber-100" : "bg-success-soft"}
+          iconColor={
+            lecturasSinFacturar > 0 ? "text-amber-600" : "text-success"
+          }
+          label="Lecturas Facturadas"
+          valor={`${resumen.lecturas_facturadas} / ${resumen.lecturas_realizadas}`}
+          subtexto={
+            lecturasSinFacturar > 0
+              ? `${lecturasSinFacturar} pendiente(s) de facturar`
+              : "todas facturadas"
+          }
+        />
         <TarjetaKpi
           icon={AlertTriangle}
           iconBg="bg-danger-soft"

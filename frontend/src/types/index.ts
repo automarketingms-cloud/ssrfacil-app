@@ -368,6 +368,7 @@ export interface ResumenDashboard {
   facturacion_total_mes: number;
   consumo_total_m3: number;
   lecturas_realizadas: number;
+  lecturas_facturadas: number;
   medidores_sin_lectura: number;
   reclamos_abiertos: number;
   reclamos_fuera_de_plazo: number;

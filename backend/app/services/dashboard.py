@@ -7,6 +7,7 @@ from app.models.reclamo import Reclamo
 from app.models.factura import Factura
 from app.models.pago import Pago
 from app.models.presion import MedicionPresion
+from app.models.lectura import Lectura
 from sqlalchemy import case
 from app.services.continuidad import contar_cortes_activos
 
@@ -40,19 +41,43 @@ def construir_resumen_dashboard(db: Session, periodo: str, empresa_id: int) -> d
     total_socios = total_socios or 0
     total_con_subsidio = total_con_subsidio or 0
 
-    # --- Facturación y consumo del mes ---
-    total_facturado, total_consumo, cantidad_facturas = (
+    # --- Facturación y consumo del mes (sin facturas anuladas) ---
+    total_facturado, total_consumo = (
         db.query(
             func.sum(Factura.total_a_pagar),
             func.sum(Factura.consumo_m3),
-            func.count(Factura.id),
         )
-        .filter(Factura.periodo == periodo, Factura.empresa_id == empresa_id)
+        .filter(
+            Factura.periodo == periodo,
+            Factura.empresa_id == empresa_id,
+            Factura.estado != "anulada",
+        )
         .first()
     )
     facturacion_total_mes = round(total_facturado or 0.0, 2)
     consumo_total_m3 = round(total_consumo or 0.0, 2)
-    lecturas_realizadas = cantidad_facturas or 0
+    lecturas_realizadas = (
+        db.query(func.count(func.distinct(Lectura.cliente_id)))
+        .join(Cliente, Cliente.id == Lectura.cliente_id)
+        .filter(
+            Lectura.periodo == periodo,
+            Lectura.empresa_id == empresa_id,
+            Cliente.activo == True,
+        )
+        .scalar()
+        or 0
+    )
+    lecturas_facturadas = (
+        db.query(func.count(Factura.id))
+        .join(Cliente, Cliente.id == Factura.cliente_id)
+        .filter(
+            Factura.periodo == periodo,
+            Factura.empresa_id == empresa_id,
+            Cliente.activo == True,
+        )
+        .scalar()
+        or 0
+    )
     medidores_sin_lectura = max(total_clientes_activos - lecturas_realizadas, 0)
 
     # --- Reclamos ---
@@ -123,7 +148,11 @@ def construir_resumen_dashboard(db: Session, periodo: str, empresa_id: int) -> d
 
     facturado_por_periodo = dict(
         db.query(Factura.periodo, func.sum(Factura.total_a_pagar))
-        .filter(Factura.periodo.in_(periodos_historicos), Factura.empresa_id == empresa_id)
+        .filter(
+            Factura.periodo.in_(periodos_historicos),
+            Factura.empresa_id == empresa_id,
+            Factura.estado != "anulada",
+        )
         .group_by(Factura.periodo)
         .all()
     )
@@ -152,6 +181,7 @@ def construir_resumen_dashboard(db: Session, periodo: str, empresa_id: int) -> d
         "facturacion_total_mes": facturacion_total_mes,
         "consumo_total_m3": consumo_total_m3,
         "lecturas_realizadas": lecturas_realizadas,
+        "lecturas_facturadas": lecturas_facturadas,
         "medidores_sin_lectura": medidores_sin_lectura,
         "reclamos_abiertos": total_reclamos_abiertos,
         "reclamos_fuera_de_plazo": total_reclamos_fuera_de_plazo,
