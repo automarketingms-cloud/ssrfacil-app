@@ -9,6 +9,15 @@ import BotonVolver from "../components/BotonVolver";
 
 const mesActual = new Date().toLocaleDateString("sv-SE").slice(0, 7);
 
+function formatearDuracion(horas: number | null | undefined): string {
+  if (horas == null) return "—";
+  const totalMin = Math.round(horas * 60);
+  if (totalMin < 60) return `${totalMin} min`;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
 export default function ReporteContinuidad() {
   const [periodo, setPeriodo] = useState(mesActual);
   const [reporte, setReporte] = useState<ReporteContinuidadType | null>(null);
@@ -121,12 +130,12 @@ export default function ReporteContinuidad() {
                 valor={reporte.total_clientes_afectados}
               />
               <Metrica
-                label="Duración total (hrs)"
-                valor={reporte.duracion_total_horas}
+                label="Duración total"
+                valor={formatearDuracion(reporte.duracion_total_horas)}
               />
               <Metrica
-                label="Duración promedio (hrs)"
-                valor={reporte.duracion_promedio_horas}
+                label="Duración promedio"
+                valor={formatearDuracion(reporte.duracion_promedio_horas)}
               />
               {Object.entries(reporte.cortes_por_tipo).map(
                 ([tipo, cantidad]) => (
@@ -175,7 +184,7 @@ export default function ReporteContinuidad() {
   );
 }
 
-function Metrica({ label, valor }: { label: string; valor: number }) {
+function Metrica({ label, valor }: { label: string; valor: number | string }) {
   return (
     <div className="bg-surface border border-border rounded-lg p-3">
       <p className="text-xs text-muted">{label}</p>
@@ -198,9 +207,7 @@ function TablaCortes({
           <tr className="bg-primary-light/40 text-text text-left">
             <th className="px-4 py-2 font-medium">Inicio</th>
             {!activo && <th className="px-4 py-2 font-medium">Término</th>}
-            {!activo && (
-              <th className="px-4 py-2 font-medium">Duración (hrs)</th>
-            )}
+            {!activo && <th className="px-4 py-2 font-medium">Duración</th>}
             <th className="px-4 py-2 font-medium">Tipo</th>
             <th className="px-4 py-2 font-medium">Causa</th>
             <th className="px-4 py-2 font-medium">Sector</th>
@@ -221,7 +228,9 @@ function TablaCortes({
                 </td>
               )}
               {!activo && (
-                <td className="px-4 py-2">{c.duracion_horas ?? "—"}</td>
+                <td className="px-4 py-2">
+                  {formatearDuracion(c.duracion_horas)}
+                </td>
               )}
               <td className="px-4 py-2">
                 {c.tipo === "programado" ? "Programado" : "No programado"}
