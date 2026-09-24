@@ -6,8 +6,8 @@ class CorteContinuidad(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
-    fecha_hora_inicio = Column(DateTime, nullable=False)
-    fecha_hora_termino = Column(DateTime, nullable=True)  # null mientras el corte sigue abierto
+    fecha_hora_inicio = Column(DateTime(timezone=True), nullable=False)
+    fecha_hora_termino = Column(DateTime(timezone=True), nullable=True)  # null mientras el corte sigue abierto
     tipo = Column(String(20), nullable=False)  # 'programado' | 'no_programado'
     causa = Column(String(255), nullable=False)
     sector_afectado = Column(String(255), nullable=False)

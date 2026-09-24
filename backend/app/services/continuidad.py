@@ -2,7 +2,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models.continuidad import CorteContinuidad
 from app.schemas.continuidad import CorteCreate, CorteCierre
-from datetime import date, datetime
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from io import BytesIO
 from openpyxl import Workbook
@@ -12,6 +13,16 @@ from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
+
+
+
+TZ_CHILE = ZoneInfo("America/Santiago")
+
+
+def formatear_fecha_chile(dt: datetime | None) -> str:
+    if dt is None:
+        return "—"
+    return dt.astimezone(TZ_CHILE).strftime("%d-%m-%Y %H:%M")
 
 
 def crear_corte(db: Session, corte: CorteCreate, empresa_id: int) -> CorteContinuidad:
@@ -32,6 +43,8 @@ def cerrar_corte(db: Session, corte_id: int, cierre: CorteCierre, empresa_id: in
         return None
     if corte.fecha_hora_termino is not None:
         raise ValueError("Este corte ya fue cerrado")
+    if cierre.fecha_hora_termino <= corte.fecha_hora_inicio:
+        raise ValueError("La fecha de término debe ser posterior al inicio")
     corte.fecha_hora_termino = cierre.fecha_hora_termino
     db.commit()
     db.refresh(corte)
@@ -52,8 +65,8 @@ def listar_cortes(db: Session, empresa_id: int, periodo: str = None, solo_abiert
     if periodo:
         # periodo tipo "2026-07" -> rango [inicio_mes, inicio_mes_siguiente)
         anio, mes = map(int, periodo.split("-"))
-        inicio = date(anio, mes, 1)
-        fin = date(anio + 1, 1, 1) if mes == 12 else date(anio, mes + 1, 1)
+        inicio = datetime(anio, mes, 1, tzinfo=TZ_CHILE)
+        fin = datetime(anio + 1, 1, 1, tzinfo=TZ_CHILE) if mes == 12 else datetime(anio, mes + 1, 1, tzinfo=TZ_CHILE)
         query = query.filter(
             CorteContinuidad.fecha_hora_inicio >= inicio,
             CorteContinuidad.fecha_hora_inicio < fin,
@@ -141,7 +154,7 @@ def construir_excel_reporte_continuidad(periodo: str, db: Session, empresa_id: i
     ws["A3"] = f"Total cortes: {reporte['total_cortes']} (Activos: {reporte['total_activos']} / Cerrados: {reporte['total_cerrados']})"
     ws["A4"] = f"Duración total: {reporte['duracion_total_horas']} hrs | Duración promedio: {reporte['duracion_promedio_horas']} hrs"
     ws["A5"] = f"Clientes afectados (total): {reporte['total_clientes_afectados']}"
-    ws["A6"] = f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}"
+    ws["A6"] = f"Generado: {datetime.now(TZ_CHILE).strftime('%d-%m-%Y %H:%M')}"
 
     headers = [
         "Estado", "Inicio", "Término", "Duración (hrs)", "Tipo", "Causa",
@@ -160,8 +173,8 @@ def construir_excel_reporte_continuidad(periodo: str, db: Session, empresa_id: i
 
     for estado, c in todos:
         ws.cell(row=row, column=1, value=estado)
-        ws.cell(row=row, column=2, value=str(c["fecha_hora_inicio"]))
-        ws.cell(row=row, column=3, value=str(c["fecha_hora_termino"]) if c["fecha_hora_termino"] else "—")
+        ws.cell(row=row, column=2, value=formatear_fecha_chile(c["fecha_hora_inicio"]))
+        ws.cell(row=row, column=3, value=formatear_fecha_chile(c["fecha_hora_termino"]))
         ws.cell(row=row, column=4, value=c["duracion_horas"] if c["duracion_horas"] is not None else "—")
         ws.cell(row=row, column=5, value=c["tipo"])
         ws.cell(row=row, column=6, value=c["causa"])
@@ -199,7 +212,7 @@ def construir_pdf_reporte_continuidad(periodo: str, db: Session, empresa_id: int
         f"Duración promedio: {reporte['duracion_promedio_horas']} hrs | "
         f"Clientes afectados: {reporte['total_clientes_afectados']}", styles["Normal"]
     ))
-    elementos.append(Paragraph(f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
+    elementos.append(Paragraph(f"Generado: {datetime.now(TZ_CHILE).strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
     elementos.append(Spacer(1, 0.5 * cm))
 
     data = [["Estado", "Inicio", "Término", "Dur. (hrs)", "Tipo", "Sector", "Clientes Afect."]]
@@ -209,8 +222,8 @@ def construir_pdf_reporte_continuidad(periodo: str, db: Session, empresa_id: int
     for estado, c in todos:
         data.append([
             estado,
-            str(c["fecha_hora_inicio"]),
-            str(c["fecha_hora_termino"]) if c["fecha_hora_termino"] else "—",
+            formatear_fecha_chile(c["fecha_hora_inicio"]),
+            formatear_fecha_chile(c["fecha_hora_termino"]),
             c["duracion_horas"] if c["duracion_horas"] is not None else "—",
             c["tipo"],
             c["sector_afectado"],
