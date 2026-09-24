@@ -113,7 +113,7 @@ export default function ResumenMensual() {
                               Socio
                             </span>
                           ) : (
-                            <span className="text-xs text-muted">No socio</span>
+                            <span className="text-xs text-muted">Usuario</span>
                           )}
                         </td>
                         <td className="px-4 py-2 text-right text-muted">

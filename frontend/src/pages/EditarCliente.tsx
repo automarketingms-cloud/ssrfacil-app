@@ -72,10 +72,19 @@ export default function EditarCliente() {
     setError(null);
     try {
       await actualizarCliente(Number(id), {
-        ...form,
+        nombre: form.nombre,
+        rut: form.rut,
+        direccion: form.direccion,
+        numero_medidor: form.numero_medidor,
+        es_socio: form.es_socio,
+        tiene_subsidio: form.tiene_subsidio,
         porcentaje_subsidio: form.tiene_subsidio
           ? (porcentajeSubsidio ?? 0) / 100
           : 0,
+        tipo_cliente: form.tipo_cliente,
+        giro:
+          form.tipo_cliente === "persona_juridica" ? form.giro || null : null,
+        comuna: form.comuna || null,
       });
       navigate("/clientes");
     } catch (err) {
@@ -149,6 +158,18 @@ export default function EditarCliente() {
             className="w-full px-3 py-2 rounded-lg border border-border bg-white text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium text-text mb-1">
+            Comuna
+          </label>
+          <input
+            type="text"
+            name="comuna"
+            value={form.comuna ?? ""}
+            onChange={handleChange}
+            className="w-full px-3 py-2 rounded-lg border border-border bg-white text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
 
         <div>
           <label className="block text-sm font-medium text-text mb-1">
@@ -163,6 +184,40 @@ export default function EditarCliente() {
             className="w-full px-3 py-2 rounded-lg border border-border bg-white text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium text-text mb-1">
+            Tipo de cliente
+          </label>
+          <select
+            name="tipo_cliente"
+            value={form.tipo_cliente ?? ""}
+            onChange={handleChange}
+            required
+            className="w-full px-3 py-2 rounded-lg border border-border bg-white text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <option value="" disabled>
+              Selecciona un tipo...
+            </option>
+            <option value="persona_natural">Persona natural</option>
+            <option value="persona_juridica">Persona jurídica</option>
+          </select>
+        </div>
+
+        {form.tipo_cliente === "persona_juridica" && (
+          <div>
+            <label className="block text-sm font-medium text-text mb-1">
+              Giro
+            </label>
+            <input
+              type="text"
+              name="giro"
+              value={form.giro ?? ""}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 rounded-lg border border-border bg-white text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+        )}
 
         <div className="flex items-center gap-6 pt-2">
           <label className="flex items-center gap-2 text-sm text-text">

@@ -6,9 +6,10 @@ import {
   reactivarCliente,
 } from "../api/clientes";
 import type { Cliente } from "../types";
+import { etiquetaTipoCliente } from "../utils/cliente";
 
 type FiltroActivo = "todos" | "activos" | "inactivos";
-type FiltroSocio = "todos" | "socios" | "no_socios";
+type FiltroSocio = "todos" | "socios" | "usuarios";
 
 const LIMIT = 500;
 
@@ -44,7 +45,7 @@ export default function ListarClientes() {
       if (filtroActivo === "activos") filtros.activo = true;
       if (filtroActivo === "inactivos") filtros.activo = false;
       if (filtroSocio === "socios") filtros.es_socio = true;
-      if (filtroSocio === "no_socios") filtros.es_socio = false;
+      if (filtroSocio === "usuarios") filtros.es_socio = false;
       if (busquedaDebounced.trim()) filtros.q = busquedaDebounced.trim();
 
       const data = await listarClientes(filtros);
@@ -114,9 +115,9 @@ export default function ListarClientes() {
           onChange={(e) => setFiltroSocio(e.target.value as FiltroSocio)}
           className="px-3 py-2 rounded-lg border border-border bg-surface text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         >
-          <option value="todos">Socios y no socios</option>
+          <option value="todos">Socios y usuarios</option>
           <option value="socios">Solo socios</option>
-          <option value="no_socios">Solo no socios</option>
+          <option value="usuarios">Solo usuarios</option>
         </select>
       </div>
 
@@ -141,7 +142,9 @@ export default function ListarClientes() {
                   <th className="text-left px-4 py-2 font-medium">Nombre</th>
                   <th className="text-left px-4 py-2 font-medium">RUT</th>
                   <th className="text-left px-4 py-2 font-medium">Medidor</th>
-                  <th className="text-left px-4 py-2 font-medium">Socio</th>
+                  <th className="text-left px-4 py-2 font-medium">Condición</th>
+                  <th className="text-left px-4 py-2 font-medium">Tipo</th>
+                  <th className="text-left px-4 py-2 font-medium">Subsidio</th>
                   <th className="text-left px-4 py-2 font-medium">Estado</th>
                   <th className="text-center px-4 py-2 font-medium">Acción</th>
                 </tr>
@@ -158,7 +161,19 @@ export default function ListarClientes() {
                           Socio
                         </span>
                       ) : (
-                        <span className="text-xs text-muted">No socio</span>
+                        <span className="text-xs text-muted">Usuario</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-muted whitespace-nowrap">
+                      {etiquetaTipoCliente(c.tipo_cliente, true)}
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      {c.tiene_subsidio ? (
+                        <span className="text-xs font-medium text-text">
+                          {Math.round(c.porcentaje_subsidio * 100)}%
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted">—</span>
                       )}
                     </td>
                     <td className="px-4 py-2">

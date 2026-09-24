@@ -6,6 +6,7 @@ import {
   reactivarCliente,
 } from "../api/clientes";
 import type { Cliente } from "../types";
+import { etiquetaSocio, etiquetaTipoCliente } from "../utils/cliente";
 
 export default function DetalleCliente() {
   const { id } = useParams<{ id: string }>();
@@ -82,9 +83,17 @@ export default function DetalleCliente() {
       <div className="bg-surface rounded-xl border border-border divide-y divide-border">
         <Dato label="RUT" valor={cliente.rut} />
         <Dato label="Dirección" valor={cliente.direccion} />
+        {cliente.comuna && <Dato label="Comuna" valor={cliente.comuna} />}
         <Dato label="N° medidor" valor={cliente.numero_medidor} />
         <Dato label="Fecha de ingreso" valor={cliente.fecha_ingreso ?? "—"} />
-        <Dato label="Socio" valor={cliente.es_socio ? "Sí" : "No"} />
+        <Dato label="Condición" valor={etiquetaSocio(cliente.es_socio)} />
+        <Dato
+          label="Tipo de cliente"
+          valor={etiquetaTipoCliente(cliente.tipo_cliente)}
+        />
+        {cliente.tipo_cliente === "persona_juridica" && (
+          <Dato label="Giro" valor={cliente.giro || "—"} />
+        )}
         <Dato
           label="Subsidio"
           valor={
