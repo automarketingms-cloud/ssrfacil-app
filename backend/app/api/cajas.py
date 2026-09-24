@@ -12,7 +12,8 @@ from app.schemas.caja import (
     CajaResponse,
     CajaResumenResponse,
     DetalleCajaResponse,
-    CajaConCajeroResponse
+    CajaConCajeroResponse,
+    CajaEditarMontoInicial,
 )
 from app.services.caja import (
     abrir_caja,
@@ -23,7 +24,8 @@ from app.services.caja import (
     listar_historial_cajas,
     construir_pdf_arqueo_caja,
     obtener_detalle_caja,
-    listar_cajas_empresa
+    listar_cajas_empresa,
+    editar_monto_inicial,
 )
 
 router = APIRouter(prefix="/cajas", tags=["cajas"])
@@ -105,6 +107,19 @@ def cerrar(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.patch("/{caja_id}/monto-inicial", response_model=CajaResponse)
+def corregir_monto_inicial(
+    caja_id: int,
+    datos: CajaEditarMontoInicial,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    try:
+        return editar_monto_inicial(
+            db, caja_id, current_user, datos.monto_inicial, datos.motivo,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/{caja_id}/arqueo", response_model=CajaResponse)
 def arquear(

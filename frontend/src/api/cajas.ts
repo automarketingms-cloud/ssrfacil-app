@@ -64,3 +64,13 @@ export async function obtenerCajasEmpresa(
   const query = estado ? `?estado=${estado}` : "";
   return apiFetch(`/cajas/empresa${query}`);
 }
+
+export async function editarMontoInicial(
+  cajaId: number,
+  data: { monto_inicial: number; motivo: string },
+): Promise<void> {
+  await apiFetch<unknown>(`/cajas/${cajaId}/monto-inicial`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}

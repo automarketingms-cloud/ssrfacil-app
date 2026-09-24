@@ -192,13 +192,22 @@ export default function MiCaja() {
         </div>
       )}
 
-      {/* Resumen del cierre recién hecho */}
+      {/* Resumen del cierre recién hecho: aquí se hace el arqueo */}
       {cajaRecienCerrada && (
         <div className="bg-surface border border-border rounded-xl p-4 mb-4 max-w-md">
-          <h2 className="text-sm font-semibold text-text mb-3 flex items-center gap-2">
-            <Lock size={16} />
-            Caja cerrada
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-text flex items-center gap-2">
+              <Lock size={16} />
+              Caja cerrada
+            </h2>
+            <button
+              onClick={() => handleVerDetalle(cajaRecienCerrada.id)}
+              className="flex items-center gap-1 text-xs font-medium text-primary-dark hover:underline"
+            >
+              <FileText size={13} />
+              Ver detalle
+            </button>
+          </div>
           <div className="flex flex-col gap-1 text-sm mb-3">
             <div className="flex justify-between">
               <span className="text-muted">Efectivo esperado</span>
@@ -263,10 +272,19 @@ export default function MiCaja() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Estado actual */}
           <div className="bg-surface border border-border rounded-xl p-4 h-fit">
-            <h2 className="text-sm font-semibold text-text mb-3 flex items-center gap-2">
-              <LockOpen size={16} />
-              Caja abierta
-            </h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-text flex items-center gap-2">
+                <LockOpen size={16} />
+                Caja abierta
+              </h2>
+              <button
+                onClick={() => handleVerDetalle(caja.id)}
+                className="flex items-center gap-1 text-xs font-medium text-primary-dark hover:underline"
+              >
+                <FileText size={13} />
+                Ver detalle
+              </button>
+            </div>
             <div className="flex flex-col gap-1 text-sm mb-4">
               <div className="flex justify-between">
                 <span className="text-muted">Apertura</span>
@@ -280,6 +298,11 @@ export default function MiCaja() {
                   {formatearMonto(caja.monto_inicial)}
                 </span>
               </div>
+              {caja.monto_inicial_original != null && (
+                <p className="text-xs text-amber-600 text-right">
+                  Monto inicial corregido
+                </p>
+              )}
             </div>
 
             {resumen && resumen.resumen_por_metodo.length > 0 && (
@@ -391,15 +414,30 @@ export default function MiCaja() {
                   <span className="font-medium text-text">
                     {formatearFechaHora(c.fecha_apertura)}
                   </span>
-                  <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      c.estado === "abierta"
-                        ? "bg-primary-light text-primary-dark"
-                        : "bg-success-soft text-success"
-                    }`}
-                  >
-                    {c.estado === "abierta" ? "Abierta" : "Cerrada"}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleVerDetalle(c.id)}
+                      className="flex items-center gap-1 text-xs font-medium text-primary-dark hover:underline"
+                    >
+                      <FileText size={13} />
+                      Ver detalle
+                    </button>
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        c.estado === "abierta"
+                          ? "bg-primary-light text-primary-dark"
+                          : c.fecha_arqueo
+                            ? "bg-success-soft text-success"
+                            : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {c.estado === "abierta"
+                        ? "Abierta"
+                        : c.fecha_arqueo
+                          ? "Arqueada"
+                          : "Por arquear"}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between mt-1 text-xs text-muted">
                   <span>Inicial: {formatearMonto(c.monto_inicial)}</span>
@@ -409,23 +447,24 @@ export default function MiCaja() {
                     </span>
                   )}
                 </div>
+                {c.monto_inicial_original != null && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Monto inicial corregido
+                  </p>
+                )}
 
                 {c.estado === "cerrada" && (
                   <div className="mt-2 flex items-center justify-between">
                     {c.fecha_arqueo ? (
-                      <>
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
-                          <ClipboardCheck size={13} />
-                          Arqueada el {formatearFechaHora(c.fecha_arqueo)}
-                        </span>
-                        <button
-                          onClick={() => handleVerDetalle(c.id)}
-                          className="flex items-center gap-1 text-xs font-medium text-primary-dark hover:underline"
-                        >
-                          <FileText size={13} />
-                          Ver detalle
-                        </button>
-                      </>
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
+                        <ClipboardCheck size={13} />
+                        Arqueada el {formatearFechaHora(c.fecha_arqueo)}
+                      </span>
+                    ) : c.id === cajaRecienCerrada?.id ? (
+                      // Esta caja se arquea desde el recuadro de arriba, para no duplicar el formulario
+                      <span className="text-xs text-muted">
+                        Arquéala desde el recuadro "Caja cerrada" de arriba
+                      </span>
                     ) : (
                       <BloqueArqueo
                         abierto={arqueoAbiertoId === c.id}

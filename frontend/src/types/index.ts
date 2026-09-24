@@ -549,6 +549,10 @@ export interface Caja {
   cajero_id: number;
   fecha_apertura: string;
   monto_inicial: number;
+  monto_inicial_original: number | null;
+  fecha_edicion_monto_inicial: string | null;
+  motivo_edicion_monto_inicial: string | null;
+  monto_inicial_editado_por_nombre: string | null;
   fecha_cierre: string | null;
   monto_efectivo_esperado: number | null;
   observaciones_cierre: string | null;

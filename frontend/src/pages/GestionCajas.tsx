@@ -98,8 +98,8 @@ export default function GestionCajas() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-text">Gestión de Cajas</h1>
         <p className="text-sm text-muted">
-          Cajas de todos los cajeros de la empresa — cierra o arquea las que
-          hayan quedado pendientes
+          Cajas de todos los cajeros de la empresa — revisa el detalle, cierra o
+          arquea las que hayan quedado pendientes
         </p>
       </div>
 
@@ -150,15 +150,30 @@ export default function GestionCajas() {
                     {c.cajero_nombre}
                   </span>
                 </div>
-                <span
-                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                    c.estado === "abierta"
-                      ? "bg-primary-light text-primary-dark"
-                      : "bg-success-soft text-success"
-                  }`}
-                >
-                  {c.estado === "abierta" ? "Abierta" : "Cerrada"}
-                </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => navigate(`/caja/${c.id}`)}
+                    className="flex items-center gap-1 text-xs font-medium text-primary-dark hover:underline"
+                  >
+                    <FileText size={13} />
+                    Ver detalle
+                  </button>
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      c.estado === "abierta"
+                        ? "bg-primary-light text-primary-dark"
+                        : c.fecha_arqueo
+                          ? "bg-success-soft text-success"
+                          : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {c.estado === "abierta"
+                      ? "Abierta"
+                      : c.fecha_arqueo
+                        ? "Arqueada"
+                        : "Por arquear"}
+                  </span>
+                </div>
               </div>
 
               <div className="flex flex-col gap-1 text-sm mt-2">
@@ -174,6 +189,11 @@ export default function GestionCajas() {
                     {formatearMonto(c.monto_inicial)}
                   </span>
                 </div>
+                {c.monto_inicial_original != null && (
+                  <p className="text-xs text-amber-600 text-right">
+                    Monto inicial corregido
+                  </p>
+                )}
                 {c.estado === "cerrada" && (
                   <div className="flex justify-between">
                     <span className="text-muted">Efectivo esperado</span>
@@ -234,19 +254,10 @@ export default function GestionCajas() {
               {c.estado === "cerrada" && (
                 <div className="mt-3 border-t border-border pt-3 flex items-center justify-between">
                   {c.fecha_arqueo ? (
-                    <>
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
-                        <ClipboardCheck size={13} />
-                        Arqueada el {formatearFechaHora(c.fecha_arqueo)}
-                      </span>
-                      <button
-                        onClick={() => navigate(`/caja/${c.id}`)}
-                        className="flex items-center gap-1 text-xs font-medium text-primary-dark hover:underline"
-                      >
-                        <FileText size={13} />
-                        Ver detalle
-                      </button>
-                    </>
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
+                      <ClipboardCheck size={13} />
+                      Arqueada el {formatearFechaHora(c.fecha_arqueo)}
+                    </span>
                   ) : arqueandoId !== c.id ? (
                     <button
                       onClick={() => setArqueandoId(c.id)}

@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CajaAperturaCreate(BaseModel):
@@ -14,6 +14,11 @@ class CajaArqueoCreate(BaseModel):
     observaciones_arqueo: str | None = None
 
 
+class CajaEditarMontoInicial(BaseModel):
+    monto_inicial: float = Field(ge=0)
+    motivo: str = Field(min_length=3, max_length=255)
+
+
 class CajaResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -21,6 +26,10 @@ class CajaResponse(BaseModel):
     cajero_id: int
     fecha_apertura: datetime
     monto_inicial: float
+    monto_inicial_original: float | None = None
+    fecha_edicion_monto_inicial: datetime | None = None
+    motivo_edicion_monto_inicial: str | None = None
+    monto_inicial_editado_por_nombre: str | None = None
     fecha_cierre: datetime | None = None
     monto_efectivo_esperado: float | None = None
     observaciones_cierre: str | None = None
