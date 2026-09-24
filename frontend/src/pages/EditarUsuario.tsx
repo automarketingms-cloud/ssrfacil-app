@@ -28,6 +28,7 @@ export default function EditarUsuario() {
   const esSuperAdmin = usuarioActual?.rol === "super_admin";
   const esMiUsuario = usuarioActual?.id === Number(id);
   const roles = esSuperAdmin ? ROLES_SUPER_ADMIN_EDITA : ROLES_ADMIN_EDITA;
+  const puedeCambiarPassword = esSuperAdmin || usuarioActual?.rol === "admin";
 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -64,7 +65,7 @@ export default function EditarUsuario() {
         payload.rol = rol;
         payload.activo = activo;
       }
-      if (esSuperAdmin && password.length > 0) {
+      if (puedeCambiarPassword && password.length > 0) {
         payload.password = password;
       }
       await editarUsuario(Number(id), payload);
@@ -173,7 +174,7 @@ export default function EditarUsuario() {
           )}
         </div>
 
-        {esSuperAdmin && (
+        {puedeCambiarPassword && (
           <div>
             <label className="block text-sm font-medium text-text mb-1">
               Nueva contraseña

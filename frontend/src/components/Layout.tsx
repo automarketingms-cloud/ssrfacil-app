@@ -202,7 +202,7 @@ export default function Layout() {
           <img
             src="/logo.png"
             alt="APR Fácil"
-            className="h-24 lg:h-[168px] w-auto block"
+            className="h-8 lg:h-10 w-auto block mt-4 mb-6 mx-auto"
           />
           <button
             onClick={() => setMenuMovilAbierto(false)}

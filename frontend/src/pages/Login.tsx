@@ -3,6 +3,8 @@ import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/http";
+import OlvidastePassword from "../components/OlvidastePassword";
+import PieDerechos from "../components/PieDerechos";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -33,14 +35,16 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-navy">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-navy p-4">
       <form
         onSubmit={handleSubmit}
         className="bg-white rounded-lg shadow-md p-8 w-full max-w-sm"
       >
-        <h1 className="text-2xl font-bold text-navy mb-6 text-center">
-          SSR Fácil
-        </h1>
+        <img
+          src="/logoLogin.png"
+          alt="SSR Fácil"
+          className="h-18 w-auto max-w-full mx-auto mb-6"
+        />
 
         {error && (
           <div className="bg-red-50 text-red-700 text-sm rounded-md p-3 mb-4">
@@ -57,6 +61,7 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoComplete="username"
             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
@@ -70,6 +75,7 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            autoComplete="current-password"
             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
@@ -81,7 +87,11 @@ export default function Login() {
         >
           {cargando ? "Ingresando..." : "Ingresar"}
         </button>
+
+        <OlvidastePassword />
       </form>
+
+      <PieDerechos className="text-white/70" />
     </div>
   );
 }

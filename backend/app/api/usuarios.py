@@ -14,7 +14,7 @@ from app.core.deps import require_roles, get_current_user
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
 
-CAMPOS_PERMITIDOS_ADMIN = {"nombre", "email", "activo", "rol"}
+CAMPOS_PERMITIDOS_ADMIN = {"nombre", "email", "activo", "rol", "password"}
 ROLES_PERMITIDOS_ADMIN_ASIGNA = {RolUsuario.OFICINA, RolUsuario.TERRENO}
 
 
@@ -144,7 +144,7 @@ def editar_usuario(
         if not set(update_data.keys()) <= CAMPOS_PERMITIDOS_ADMIN:
             raise HTTPException(
                 status_code=403,
-                detail="Como admin solo puedes modificar nombre, email, estado activo o rol",
+                                detail="Como admin solo puedes modificar nombre, email, estado activo, rol o contraseña",
             )
         if "rol" in update_data and update_data["rol"] not in ROLES_PERMITIDOS_ADMIN_ASIGNA:
             raise HTTPException(
