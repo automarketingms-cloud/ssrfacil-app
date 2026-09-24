@@ -5,6 +5,7 @@ import type { TarifaTramo } from "../types";
 import { formatoCLP } from "../utils/formato";
 import { aNumeroOVacio } from "../utils/numero";
 import ConfirmDialog from "../components/ConfirmDialog";
+import BotonVolver from "../components/BotonVolver";
 
 // Igual que TarifaTramo, pero permite campos vacíos mientras se edita
 type TramoForm = {
@@ -126,6 +127,7 @@ export default function CrearTarifa() {
 
   return (
     <div className="max-w-2xl">
+      <BotonVolver fallback="/tarifas" />
       <h1 className="text-xl font-semibold text-text mb-1">Nueva tarifa</h1>
       <p className="text-sm text-muted mb-6">
         Crea una tarifa nueva. Las tarifas anteriores no se modifican; esta se

@@ -10,7 +10,7 @@ import {
 const LIMIT = 500;
 
 function periodoActual(): string {
-  return new Date().toISOString().slice(0, 7); // "2026-08"
+  return new Date().toLocaleDateString("sv-SE").slice(0, 7);
 }
 
 function anioActual(): number {

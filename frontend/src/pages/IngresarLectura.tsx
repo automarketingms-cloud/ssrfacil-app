@@ -6,7 +6,7 @@ import { listarClientes } from "../api/clientes";
 import { crearLectura, crearLecturaTerminoMedio } from "../api/lecturas";
 import type { Cliente } from "../types";
 
-const today = new Date().toISOString().split("T")[0];
+const today = new Date().toLocaleDateString("sv-SE");
 const currentPeriodo = today.slice(0, 7); // "2026-07"
 
 const initialForm = {

@@ -12,7 +12,7 @@ import type { Reclamo } from "../types";
 import Textarea from "../components/Textarea";
 
 function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString("sv-SE");
 }
 
 const ETIQUETAS_ESTADO: Record<string, string> = {

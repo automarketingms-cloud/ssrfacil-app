@@ -5,8 +5,9 @@ import {
   descargarReporteContinuidadPdf,
 } from "../api/reportes";
 import type { ReporteContinuidad as ReporteContinuidadType } from "../types";
+import BotonVolver from "../components/BotonVolver";
 
-const mesActual = new Date().toISOString().slice(0, 7); // "2026-07"
+const mesActual = new Date().toLocaleDateString("sv-SE").slice(0, 7);
 
 export default function ReporteContinuidad() {
   const [periodo, setPeriodo] = useState(mesActual);
@@ -43,6 +44,7 @@ export default function ReporteContinuidad() {
   return (
     <div className="max-w-5xl space-y-6">
       <div>
+        <BotonVolver fallback="/reportes" />
         <h1 className="text-xl font-semibold text-text mb-1">
           Reporte de Continuidad de Servicio
         </h1>

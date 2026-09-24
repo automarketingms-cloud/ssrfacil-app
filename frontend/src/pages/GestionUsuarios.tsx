@@ -143,6 +143,19 @@ export default function GestionUsuarios() {
     setEditandoId(null);
   }
 
+  function toggleFormNuevo() {
+    if (mostrarForm) {
+      // al cancelar, limpiar el formulario y el error
+      setNombre("");
+      setEmail("");
+      setPassword("");
+      setRol("terreno");
+      setEmpresaIdNuevo("");
+      setFormError(null);
+    }
+    setMostrarForm(!mostrarForm);
+  }
+
   async function handleEditSubmit(e: FormEvent) {
     e.preventDefault();
     setEditError(null);
@@ -186,7 +199,7 @@ export default function GestionUsuarios() {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold text-navy">Usuarios</h1>
         <button
-          onClick={() => setMostrarForm(!mostrarForm)}
+          onClick={toggleFormNuevo}
           className="bg-primary text-white rounded-md px-4 py-2 font-medium hover:opacity-90"
         >
           {mostrarForm ? "Cancelar" : "Nuevo usuario"}
@@ -222,6 +235,7 @@ export default function GestionUsuarios() {
       {mostrarForm && (
         <form
           onSubmit={handleSubmit}
+          autoComplete="off"
           className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6"
         >
           {formError && (
@@ -253,6 +267,7 @@ export default function GestionUsuarios() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoComplete="off"
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
@@ -263,10 +278,11 @@ export default function GestionUsuarios() {
               </label>
               <input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
                 minLength={8}
+                autoComplete="new-password"
+                placeholder="Dejar en blanco para no cambiar"
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>

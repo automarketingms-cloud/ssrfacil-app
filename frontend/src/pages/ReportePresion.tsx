@@ -5,6 +5,7 @@ import {
   descargarReportePresionExcel,
   descargarReportePresionPdf,
 } from "../api/reportes";
+import BotonVolver from "../components/BotonVolver";
 
 export default function ReportePresion() {
   const [desde, setDesde] = useState("");
@@ -45,6 +46,7 @@ export default function ReportePresion() {
 
   return (
     <div className="max-w-4xl">
+      <BotonVolver fallback="/reportes" />
       <h1 className="text-xl font-semibold text-text mb-1">
         Reporte de presión
       </h1>

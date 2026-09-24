@@ -4,6 +4,8 @@ import {
   descargarReporteClientesSubsidioExcel,
 } from "../api/reportes";
 import type { ClienteSubsidio } from "../types";
+import { etiquetaSocio } from "../utils/cliente";
+import BotonVolver from "../components/BotonVolver";
 
 export default function ReporteClientesSubsidio() {
   const [soloActivos, setSoloActivos] = useState(true);
@@ -43,6 +45,7 @@ export default function ReporteClientesSubsidio() {
   return (
     <div className="max-w-5xl space-y-6">
       <div>
+        <BotonVolver fallback="/reportes-internos" />
         <h1 className="text-xl font-semibold text-text mb-1">
           Clientes con Subsidio — Reporte
         </h1>
@@ -106,7 +109,7 @@ function TablaClientesSubsidio({ clientes }: { clientes: ClienteSubsidio[] }) {
             <th className="px-4 py-2 font-medium">RUT</th>
             <th className="px-4 py-2 font-medium">N° Medidor</th>
             <th className="px-4 py-2 font-medium">Dirección</th>
-            <th className="px-4 py-2 font-medium">Socio</th>
+            <th className="px-4 py-2 font-medium">Condición</th>
             <th className="px-4 py-2 font-medium">% Subsidio</th>
           </tr>
         </thead>
@@ -117,7 +120,7 @@ function TablaClientesSubsidio({ clientes }: { clientes: ClienteSubsidio[] }) {
               <td className="px-4 py-2">{c.rut}</td>
               <td className="px-4 py-2">{c.numero_medidor}</td>
               <td className="px-4 py-2">{c.direccion ?? "—"}</td>
-              <td className="px-4 py-2">{c.es_socio ? "Sí" : "No"}</td>
+              <td className="px-4 py-2">{etiquetaSocio(c.es_socio)}</td>
               <td className="px-4 py-2">
                 {(c.porcentaje_subsidio * 100).toFixed(1)}%
               </td>

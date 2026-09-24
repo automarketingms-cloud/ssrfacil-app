@@ -79,6 +79,7 @@ export default function CrearEmpresa() {
 
       <form
         onSubmit={handleSubmit}
+        autoComplete="off"
         className="bg-surface border border-border rounded-xl p-6 flex flex-col gap-4"
       >
         <Input
@@ -119,6 +120,7 @@ export default function CrearEmpresa() {
             onChange={handleChange}
             required
             placeholder="juan@aprnogales.cl"
+            autoComplete="off"
           />
           <Input
             label="Contraseña"
@@ -128,6 +130,7 @@ export default function CrearEmpresa() {
             onChange={handleChange}
             required
             placeholder="Mínimo 8 caracteres"
+            autoComplete="new-password"
           />
         </div>
 

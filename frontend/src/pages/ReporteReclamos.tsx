@@ -6,7 +6,7 @@ import {
 } from "../api/reportes";
 import type { ReporteReclamos as ReporteReclamosType } from "../types";
 
-const mesActual = new Date().toISOString().slice(0, 7); // "2026-07"
+const mesActual = new Date().toLocaleDateString("sv-SE").slice(0, 7);
 
 const ETIQUETAS_ESTADO: Record<string, string> = {
   abierto: "Abierto",

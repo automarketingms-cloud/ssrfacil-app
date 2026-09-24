@@ -6,6 +6,7 @@ import {
 } from "../api/reportes";
 import type { ReporteFacturacionResponse } from "../types";
 import { formatoCLP } from "../utils/formato";
+import BotonVolver from "../components/BotonVolver";
 
 export default function ReporteFacturacion() {
   const [periodo, setPeriodo] = useState("");
@@ -44,6 +45,7 @@ export default function ReporteFacturacion() {
 
   return (
     <div>
+      <BotonVolver fallback="/reportes" />
       <h1 className="text-xl font-semibold text-text mb-1">
         Reporte de facturación con respaldo
       </h1>

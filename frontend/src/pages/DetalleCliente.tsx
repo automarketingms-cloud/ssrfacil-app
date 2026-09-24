@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import {
   obtenerCliente,
   desactivarCliente,
@@ -7,10 +7,10 @@ import {
 } from "../api/clientes";
 import type { Cliente } from "../types";
 import { etiquetaSocio, etiquetaTipoCliente } from "../utils/cliente";
+import BotonVolver from "../components/BotonVolver";
 
 export default function DetalleCliente() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,17 +56,27 @@ export default function DetalleCliente() {
   }
   if (error) {
     return (
-      <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-        {error}
+      <div className="max-w-2xl">
+        <BotonVolver fallback="/clientes" />
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          {error}
+        </div>
       </div>
     );
   }
   if (!cliente) {
-    return <p className="text-sm text-muted">Cliente no encontrado.</p>;
+    return (
+      <div className="max-w-2xl">
+        <BotonVolver fallback="/clientes" />
+        <p className="text-sm text-muted">Cliente no encontrado.</p>
+      </div>
+    );
   }
 
   return (
     <div className="max-w-2xl">
+      <BotonVolver fallback="/clientes" />
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-text">{cliente.nombre}</h1>
         <span
@@ -121,12 +131,6 @@ export default function DetalleCliente() {
             : cliente.activo
               ? "Desactivar"
               : "Reactivar"}
-        </button>
-        <button
-          onClick={() => navigate("/clientes")}
-          className="px-4 py-2 rounded-lg text-muted text-sm font-medium hover:bg-gray-100 transition-colors ml-auto"
-        >
-          Volver
         </button>
       </div>
     </div>

@@ -11,6 +11,7 @@ import type {
   ComparativaAguaResumen,
 } from "../types";
 import GaugeCircular from "../components/GaugeCircular";
+import BotonVolver from "../components/BotonVolver";
 
 function periodoActual(): string {
   const now = new Date();
@@ -86,20 +87,25 @@ export default function ComparativaAgua() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-text">Agua No Facturada</h1>
-          <p className="text-sm text-muted">
-            Comparativa entre el medidor matriz y el consumo sumado de todos los
-            clientes
-          </p>
+      <div>
+        <BotonVolver fallback="/reportes-internos" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold text-text">
+              Agua No Facturada
+            </h1>
+            <p className="text-sm text-muted">
+              Comparativa entre el medidor matriz y el consumo sumado de todos
+              los clientes
+            </p>
+          </div>
+          <input
+            type="month"
+            value={periodo}
+            onChange={(e) => setPeriodo(e.target.value)}
+            className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
+          />
         </div>
-        <input
-          type="month"
-          value={periodo}
-          onChange={(e) => setPeriodo(e.target.value)}
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
-        />
       </div>
 
       {loading && <p className="text-sm text-muted">Cargando comparativa...</p>}

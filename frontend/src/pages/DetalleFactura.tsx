@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Download, ArrowLeft, AlertTriangle, Send, Ban } from "lucide-react";
+import { Download, AlertTriangle, Send, Ban } from "lucide-react";
 import {
   obtenerFactura,
   descargarFacturaPdf,
@@ -9,6 +9,7 @@ import {
 import { anularFactura } from "../api/notasCredito";
 import { useAuth } from "../context/AuthContext";
 import type { Factura } from "../types";
+import BotonVolver from "../components/BotonVolver";
 
 function formatearMonto(valor: number): string {
   return valor.toLocaleString("es-CL", {
@@ -102,8 +103,11 @@ export default function DetalleFactura() {
 
   if (error || !factura) {
     return (
-      <div className="text-sm text-danger bg-danger-soft border border-danger/30 rounded-lg px-3 py-2">
-        {error ?? "Factura no encontrada"}
+      <div>
+        <BotonVolver fallback="/facturas" />
+        <div className="text-sm text-danger bg-danger-soft border border-danger/30 rounded-lg px-3 py-2">
+          {error ?? "Factura no encontrada"}
+        </div>
       </div>
     );
   }
@@ -122,13 +126,7 @@ export default function DetalleFactura() {
 
   return (
     <div>
-      <Link
-        to="/facturas"
-        className="flex items-center gap-1 text-sm text-muted hover:text-text mb-4"
-      >
-        <ArrowLeft size={14} /> Volver a Facturación
-      </Link>
-
+      <BotonVolver fallback="/facturas" />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
         <div>
           <h1 className="text-xl font-semibold text-text">

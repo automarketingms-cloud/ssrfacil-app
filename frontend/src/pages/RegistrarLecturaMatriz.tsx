@@ -12,7 +12,7 @@ function periodoActual(): string {
 
 const initialForm = {
   periodo: periodoActual(),
-  fecha_lectura: new Date().toISOString().slice(0, 10),
+  fecha_lectura: new Date().toLocaleDateString("sv-SE"),
   lectura_actual: undefined as number | undefined,
   observaciones: "",
 };

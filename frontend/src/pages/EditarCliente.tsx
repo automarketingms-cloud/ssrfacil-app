@@ -4,6 +4,7 @@ import { obtenerCliente, actualizarCliente } from "../api/clientes";
 import { formatearRut, validarRut } from "../utils/rut";
 import { aNumeroOVacio } from "../utils/numero";
 import type { Cliente } from "../types";
+import BotonVolver from "../components/BotonVolver";
 
 export default function EditarCliente() {
   const { id } = useParams<{ id: string }>();
@@ -100,6 +101,7 @@ export default function EditarCliente() {
 
   return (
     <div className="max-w-lg">
+      <BotonVolver fallback="/clientes" />
       <h1 className="text-xl font-semibold text-text mb-1">Editar cliente</h1>
       <p className="text-sm text-muted mb-6">
         Modifica los datos del cliente y guarda los cambios.

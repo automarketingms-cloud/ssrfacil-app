@@ -12,7 +12,7 @@ const ESTADOS = [
 ];
 
 function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString("sv-SE");
 }
 
 function badgeEstado(reclamo: Reclamo) {

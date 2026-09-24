@@ -3,6 +3,7 @@ import Input from "../components/Input";
 import { crearCliente } from "../api/clientes";
 import { formatearRut, validarRut } from "../utils/rut";
 import { aNumeroOVacio } from "../utils/numero";
+import BotonVolver from "../components/BotonVolver";
 
 const initialForm = {
   nombre: "",
@@ -81,6 +82,7 @@ export default function RegistrarCliente() {
 
   return (
     <div className="max-w-lg">
+      <BotonVolver fallback="/clientes" />
       <h1 className="text-xl font-semibold text-text mb-1">
         Registrar Cliente
       </h1>

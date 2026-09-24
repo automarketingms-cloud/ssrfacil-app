@@ -20,7 +20,7 @@ function formatearMonto(valor: number): string {
 }
 
 function hoyStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString("sv-SE");
 }
 
 function corteEnTramite(f: Factura): boolean {
@@ -35,6 +35,8 @@ const ESTADO_STYLES: Record<string, string> = {
   pendiente: "bg-amber-100 text-amber-700",
   pagada: "bg-success-soft text-success",
   vencida: "bg-danger-soft text-danger",
+  parcial: "bg-amber-100 text-amber-700",
+  anulada: "bg-gray-200 text-gray-600",
 };
 
 export default function Facturacion() {
@@ -127,6 +129,7 @@ export default function Facturacion() {
           <option value="pagada">Pagada</option>
           <option value="vencida">Vencida</option>
           <option value="parcial">Parcial</option>
+          <option value="anulada">Anulada</option>
         </select>
       </div>
 
@@ -180,6 +183,7 @@ export default function Facturacion() {
                   <th className="text-right px-4 py-2">Arrastre</th>
                   <th className="text-right px-4 py-2">Total</th>
                   <th className="text-left px-4 py-2">Estado</th>
+                  <th className="text-center px-4 py-2">Acción</th>
                 </tr>
               </thead>
               <tbody>
@@ -190,12 +194,7 @@ export default function Facturacion() {
                     <tr key={f.id} className="border-t border-border">
                       <td className="px-4 py-2 text-text">
                         <div className="flex items-center gap-2">
-                          <Link
-                            to={`/facturas/${f.id}`}
-                            className="hover:text-primary hover:underline"
-                          >
-                            {f.nombre_cliente ?? `#${f.cliente_id}`}
-                          </Link>
+                          <span>{f.nombre_cliente ?? `#${f.cliente_id}`}</span>
                           {f.tipo_facturacion === "termino_medio" && (
                             <span
                               className="text-xs bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5"
@@ -251,6 +250,14 @@ export default function Facturacion() {
                         >
                           {f.estado}
                         </span>
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <Link
+                          to={`/facturas/${f.id}`}
+                          className="text-xs font-medium text-primary-dark hover:underline whitespace-nowrap"
+                        >
+                          Ver boleta
+                        </Link>
                       </td>
                     </tr>
                   );

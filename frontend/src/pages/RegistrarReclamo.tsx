@@ -6,6 +6,7 @@ import type { Cliente } from "../types";
 import Textarea from "../components/Textarea";
 import Input from "../components/Input";
 import Select from "../components/Select";
+import BotonVolver from "../components/BotonVolver";
 
 const TIPOS_RECLAMO = [
   "Corte no informado",
@@ -83,7 +84,7 @@ export default function RegistrarReclamo() {
         descripcion: form.descripcion,
         observaciones: form.observaciones || undefined,
       });
-      navigate(`/reclamos/${nuevo.id}`);
+      navigate(`/reclamos/${nuevo.id}`, { replace: true });
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error al registrar el reclamo",
@@ -95,6 +96,7 @@ export default function RegistrarReclamo() {
 
   return (
     <div className="max-w-2xl">
+      <BotonVolver fallback="/reclamos" />
       <h1 className="text-xl font-semibold text-text mb-4">
         Registrar Reclamo
       </h1>

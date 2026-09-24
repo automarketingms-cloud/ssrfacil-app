@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  Loader2,
-  ClipboardCheck,
-  FileText,
-  Wallet,
-} from "lucide-react";
+import { useParams } from "react-router-dom";
+import { Loader2, ClipboardCheck, FileText, Wallet } from "lucide-react";
 import { obtenerDetalleCaja, obtenerPdfArqueo } from "../api/cajas";
 import type { DetalleCaja } from "../types";
+import BotonVolver from "../components/BotonVolver";
 
 function formatearMonto(valor: number): string {
   return valor.toLocaleString("es-CL", {
@@ -44,7 +39,6 @@ const COLOR_METODO: Record<string, string> = {
 
 export default function DetalleCaja() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [detalle, setDetalle] = useState<DetalleCaja | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,8 +82,11 @@ export default function DetalleCaja() {
 
   if (error || !detalle) {
     return (
-      <div className="text-sm text-danger bg-danger-soft border border-danger/30 rounded-lg px-3 py-2 max-w-md">
-        {error ?? "Caja no encontrada"}
+      <div>
+        <BotonVolver fallback="/caja" />
+        <div className="text-sm text-danger bg-danger-soft border border-danger/30 rounded-lg px-3 py-2 max-w-md">
+          {error ?? "Caja no encontrada"}
+        </div>
       </div>
     );
   }
@@ -98,15 +95,9 @@ export default function DetalleCaja() {
 
   return (
     <div>
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-1 text-sm text-muted hover:text-text mb-4"
-      >
-        <ArrowLeft size={14} /> Volver
-      </button>
-
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
+          <BotonVolver fallback="/caja" />
           <h1 className="text-xl font-semibold text-text">
             Detalle de Caja #{caja.id}
           </h1>

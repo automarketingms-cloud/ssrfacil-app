@@ -5,8 +5,9 @@ import {
 } from "../api/reportes";
 import { listarUsuarios } from "../api/usuarios";
 import type { ReportePagos as ReportePagosType, Usuario } from "../types";
+import BotonVolver from "../components/BotonVolver";
 
-const hoy = new Date().toISOString().slice(0, 10); // "2026-09-06"
+const hoy = new Date().toLocaleDateString("sv-SE"); // "YYYY-MM-DD" en hora local
 
 export default function ReportePagos() {
   const [desde, setDesde] = useState(hoy);
@@ -60,6 +61,7 @@ export default function ReportePagos() {
   return (
     <div className="max-w-5xl space-y-6">
       <div>
+        <BotonVolver fallback="/reportes-internos" />
         <h1 className="text-xl font-semibold text-text mb-1">
           Reporte de Pagos
         </h1>

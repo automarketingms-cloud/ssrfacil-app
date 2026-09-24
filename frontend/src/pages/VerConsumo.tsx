@@ -6,7 +6,7 @@ import { obtenerConsumo } from "../api/consumos";
 import type { Cliente, ConsumoResponse } from "../types";
 import { formatoCLP } from "../utils/formato";
 
-const currentPeriodo = new Date().toISOString().slice(0, 7);
+const currentPeriodo = new Date().toLocaleDateString("sv-SE").slice(0, 7);
 
 export default function VerConsumo() {
   const [clientes, setClientes] = useState<Cliente[]>([]);

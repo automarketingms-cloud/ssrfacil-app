@@ -24,7 +24,7 @@ function formatearMonto(valor: number): string {
 }
 
 function hoyISO(): string {
-  return new Date().toISOString().split("T")[0];
+  return new Date().toLocaleDateString("sv-SE");
 }
 
 // Redondeo a la unidad de peso (CLP no tiene decimales) — mismo criterio
@@ -195,6 +195,7 @@ export default function RegistrarPago() {
       if (clienteSeleccionado) {
         const data = await obtenerFacturasPendientes(clienteSeleccionado.id);
         setFacturas(data);
+        setHistorial(await obtenerHistorialPagos(clienteSeleccionado.id));
       }
       setFacturaSeleccionada(null);
       setMonto("");
