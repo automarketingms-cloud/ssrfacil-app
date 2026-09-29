@@ -10,8 +10,11 @@ from app.schemas.reclamo import (
     ReclamoResponse,
     ReclamoResponder,
     ReclamoCerrarDirecto,
+    ReclamoUpdate,
 )
 from app.services import reclamos as reclamos_service
+from app.services import historial as historial_service
+from app.schemas.historial import HistorialEdicionResponse
 
 router = APIRouter(prefix="/reclamos", tags=["Reclamos"])
 
@@ -49,6 +52,36 @@ def obtener_reclamo(
         raise HTTPException(status_code=404, detail="Reclamo no encontrado")
     return reclamo
 
+
+
+@router.patch("/{reclamo_id}", response_model=ReclamoResponse)
+def editar_reclamo(
+    reclamo_id: int,
+    datos: ReclamoUpdate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    try:
+        reclamo = reclamos_service.editar_reclamo(
+            db, reclamo_id, datos, current_user.empresa_id, current_user.id
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if reclamo is None:
+        raise HTTPException(status_code=404, detail="Reclamo no encontrado")
+    return reclamo
+
+
+@router.get("/{reclamo_id}/historial", response_model=list[HistorialEdicionResponse])
+def historial_reclamo(
+    reclamo_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
+):
+    reclamo = reclamos_service.obtener_reclamo(db, reclamo_id, current_user.empresa_id)
+    if reclamo is None:
+        raise HTTPException(status_code=404, detail="Reclamo no encontrado")
+    return historial_service.listar_historial(db, current_user.empresa_id, "reclamo", reclamo_id)
 
 @router.patch("/{reclamo_id}/responder", response_model=ReclamoResponse)
 def responder_reclamo(

@@ -1,5 +1,10 @@
 import { apiFetch } from "./http";
-import type { ReclamoCreate, Reclamo } from "../types";
+import type {
+  ReclamoCreate,
+  Reclamo,
+  ReclamoUpdate,
+  HistorialEdicion,
+} from "../types";
 
 export async function crearReclamo(datos: ReclamoCreate): Promise<Reclamo> {
   return apiFetch<Reclamo>("/reclamos/", {
@@ -24,6 +29,22 @@ export async function listarReclamos(filtros?: {
 
 export async function obtenerReclamo(id: number): Promise<Reclamo> {
   return apiFetch<Reclamo>(`/reclamos/${id}`);
+}
+
+export async function editarReclamo(
+  id: number,
+  datos: ReclamoUpdate,
+): Promise<Reclamo> {
+  return apiFetch<Reclamo>(`/reclamos/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(datos),
+  });
+}
+
+export async function obtenerHistorialReclamo(
+  id: number,
+): Promise<HistorialEdicion[]> {
+  return apiFetch<HistorialEdicion[]>(`/reclamos/${id}/historial`);
 }
 
 export async function responderReclamo(

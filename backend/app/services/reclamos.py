@@ -1,13 +1,14 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import extract
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 import holidays
 
 from app.models.reclamo import Reclamo
 from app.models.cliente import Cliente 
 from app.models.presion import MedicionPresion
-from app.schemas.reclamo import ReclamoCreate, ReclamoResponder
+from app.schemas.reclamo import ReclamoCreate, ReclamoResponder, ReclamoUpdate
 from app.services.presion import evaluar_cumplimiento
+from app.services.historial import calcular_diferencias, registrar_edicion
 
 from io import BytesIO
 from openpyxl import Workbook
@@ -66,7 +67,7 @@ def generar_folio(db: Session, anio: int, empresa_id: int) -> str:
 
 
 def crear_reclamo(db: Session, datos: ReclamoCreate, empresa_id: int) -> Reclamo:
-    fecha_recepcion = datos.fecha_recepcion or datetime.now()
+    fecha_recepcion = datetime.now()
     anio = fecha_recepcion.year
     folio = generar_folio(db, anio, empresa_id)
     plazo_vencimiento = sumar_dias_habiles(fecha_recepcion.date(), DIAS_HABILES_PLAZO)
@@ -189,6 +190,89 @@ def obtener_reclamo(db: Session, reclamo_id: int, empresa_id: int) -> Reclamo:
         .filter(Reclamo.id == reclamo_id, Reclamo.empresa_id == empresa_id)
         .first()
     )
+
+
+
+ESTADOS_NO_EDITABLES = {"cerrado", "cerrado_sin_respuesta"}
+
+
+def editar_reclamo(
+    db: Session, reclamo_id: int, datos: ReclamoUpdate, empresa_id: int, usuario_id: int
+) -> Reclamo:
+    reclamo = obtener_reclamo(db, reclamo_id, empresa_id)
+    if reclamo is None:
+        return None
+    if reclamo.estado in ESTADOS_NO_EDITABLES:
+        raise ValueError("No se puede editar un reclamo cerrado")
+
+    cambios = datos.model_dump(exclude_unset=True)
+    if not cambios:
+        raise ValueError("No se enviaron campos para editar")
+
+    if "respuesta" in cambios and reclamo.estado != "respondido":
+        raise ValueError("Solo se puede editar la respuesta de un reclamo ya respondido")
+
+    # Se arman los valores finales ANTES de tocar el objeto, para poder comparar
+    nuevos: dict = {}
+
+    # --- Reclamante ---
+    cliente_nuevo = None
+    if "cliente_id" in cambios:
+        if cambios["cliente_id"] is not None:
+            cliente_nuevo = (
+                db.query(Cliente)
+                .filter(Cliente.id == cambios["cliente_id"], Cliente.empresa_id == empresa_id)
+                .first()
+            )
+            if cliente_nuevo is None:
+                raise ValueError("Cliente no encontrado")
+            nuevos["cliente_id"] = cliente_nuevo.id
+            nuevos["nombre_reclamante"] = cliente_nuevo.nombre  # snapshot, igual que al crear
+            nuevos["rut_reclamante"] = cliente_nuevo.rut
+        else:
+            nuevos["cliente_id"] = None
+
+    cliente_final = nuevos.get("cliente_id", reclamo.cliente_id)
+    if cliente_final is None:
+        # reclamante sin cliente: nombre y RUT se editan a mano
+        for campo in ("nombre_reclamante", "rut_reclamante"):
+            if campo in cambios:
+                nuevos[campo] = cambios[campo]
+        nombre_final = nuevos.get("nombre_reclamante", reclamo.nombre_reclamante)
+        rut_final = nuevos.get("rut_reclamante", reclamo.rut_reclamante)
+        if not nombre_final or not rut_final:
+            raise ValueError("Si el reclamo no tiene cliente, nombre y RUT del reclamante son obligatorios")
+
+    # --- Campos simples ---
+    for campo in ("direccion_reclamo", "tipo_reclamo", "descripcion", "observaciones", "respuesta"):
+        if campo in cambios:
+            nuevos[campo] = cambios[campo]
+
+    diferencias = calcular_diferencias(reclamo, nuevos)
+    if not diferencias:
+        # se guardó sin modificar nada real: no se registra edición
+        return reclamo
+
+    # En el historial el cliente se guarda por nombre, no por id
+    if "cliente_id" in diferencias:
+        diferencias.pop("cliente_id")
+        diferencias["cliente"] = {
+            "antes": reclamo.cliente.nombre if reclamo.cliente else "Sin cliente registrado",
+            "despues": cliente_nuevo.nombre if cliente_nuevo else "Sin cliente registrado",
+        }
+
+    for campo, valor in nuevos.items():
+        setattr(reclamo, campo, valor)
+
+    # --- Auditoría ---
+    ahora = datetime.now(timezone.utc)
+    reclamo.editado_por_id = usuario_id
+    reclamo.fecha_edicion = ahora
+    registrar_edicion(db, empresa_id, "reclamo", reclamo.id, usuario_id, diferencias, ahora)
+
+    db.commit()
+    db.refresh(reclamo)
+    return reclamo
 
 
 

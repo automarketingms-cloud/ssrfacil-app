@@ -389,7 +389,6 @@ export interface Reclamo {
   direccion_reclamo: string | null;
   tipo_reclamo: string;
   descripcion: string;
-  fecha_recepcion: string;
   plazo_vencimiento: string;
   estado: "abierto" | "respondido" | "cerrado" | "cerrado_sin_respuesta";
   fecha_respuesta: string | null;
@@ -398,6 +397,28 @@ export interface Reclamo {
   fuera_de_plazo: boolean | null;
   motivo_cierre: string | null;
   observaciones: string | null;
+  editado_por_id: number | null;
+  editado_por_nombre: string | null;
+  fecha_edicion: string | null;
+}
+
+export interface ReclamoUpdate {
+  cliente_id?: number | null;
+  nombre_reclamante?: string | null;
+  rut_reclamante?: string | null;
+  direccion_reclamo?: string | null;
+  tipo_reclamo?: string;
+  descripcion?: string;
+  observaciones?: string | null;
+  respuesta?: string;
+}
+
+export interface HistorialEdicion {
+  id: number;
+  usuario_id: number;
+  usuario_nombre: string | null;
+  fecha: string;
+  cambios: Record<string, { antes: unknown; despues: unknown }>;
 }
 
 export interface ReclamoCreate {

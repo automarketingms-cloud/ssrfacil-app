@@ -34,7 +34,17 @@ class Reclamo(Base):
 
     observaciones = Column(Text, nullable=True)
 
+    
+    editado_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    fecha_edicion = Column(DateTime(timezone=True), nullable=True)
+
     cliente = relationship("Cliente")
+
+    editado_por = relationship("Usuario", foreign_keys=[editado_por_id])
+
+    @property
+    def editado_por_nombre(self):
+        return self.editado_por.nombre if self.editado_por else None
 
     __table_args__ = (
         UniqueConstraint("empresa_id", "folio", name="uq_reclamos_empresa_folio"),

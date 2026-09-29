@@ -5,11 +5,13 @@ import {
   responderReclamo,
   cerrarReclamo,
   cerrarReclamoSinRespuesta,
+  obtenerHistorialReclamo,
 } from "../api/reclamos";
 
-import type { Reclamo } from "../types";
+import type { Reclamo, HistorialEdicion } from "../types";
 
 import Textarea from "../components/Textarea";
+import BotonVolver from "../components/BotonVolver";
 
 function hoyISO() {
   return new Date().toLocaleDateString("sv-SE");
@@ -22,12 +24,29 @@ const ETIQUETAS_ESTADO: Record<string, string> = {
   cerrado_sin_respuesta: "Cerrado sin respuesta",
 };
 
+const ETIQUETAS_CAMPO: Record<string, string> = {
+  cliente: "Cliente",
+  nombre_reclamante: "Nombre reclamante",
+  rut_reclamante: "RUT reclamante",
+  direccion_reclamo: "Dirección",
+  tipo_reclamo: "Tipo de reclamo",
+  descripcion: "Descripción",
+  observaciones: "Observaciones",
+  respuesta: "Respuesta",
+};
+
+function formatearValor(valor: unknown): string {
+  if (valor === null || valor === undefined || valor === "") return "(vacío)";
+  return String(valor);
+}
+
 export default function DetalleReclamo() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [reclamo, setReclamo] = useState<Reclamo | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [historial, setHistorial] = useState<HistorialEdicion[]>([]);
 
   const [respuestaTexto, setRespuestaTexto] = useState("");
   const [mostrarFormRespuesta, setMostrarFormRespuesta] = useState(false);
@@ -39,8 +58,12 @@ export default function DetalleReclamo() {
   async function cargar() {
     setCargando(true);
     try {
-      const datos = await obtenerReclamo(Number(id));
+      const [datos, ediciones] = await Promise.all([
+        obtenerReclamo(Number(id)),
+        obtenerHistorialReclamo(Number(id)),
+      ]);
       setReclamo(datos);
+      setHistorial(ediciones);
     } catch {
       setError("No se pudo cargar el reclamo");
     } finally {
@@ -107,32 +130,40 @@ export default function DetalleReclamo() {
   const fueraDePlazo =
     reclamo.estado === "abierto" && reclamo.plazo_vencimiento < hoyISO();
 
+  const puedeEditar =
+    reclamo.estado === "abierto" || reclamo.estado === "respondido";
+
   return (
     <div className="max-w-2xl">
-      <button
-        onClick={() => navigate("/reclamos")}
-        className="text-primary text-sm mb-4"
-      >
-        ← Volver al listado
-      </button>
+      <BotonVolver fallback="/reclamos" />
 
       <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-semibold text-text">
             Reclamo {reclamo.folio}
           </h1>
-          <span
-            className={`px-3 py-1 rounded-full text-sm font-medium ${
-              {
-                abierto: "bg-warning-soft text-warning",
-                respondido: "bg-primary-light text-primary-dark",
-                cerrado: "bg-success-soft text-success",
-                cerrado_sin_respuesta: "bg-gray-100 text-muted",
-              }[reclamo.estado]
-            }`}
-          >
-            {ETIQUETAS_ESTADO[reclamo.estado]}
-          </span>
+          <div className="flex items-center gap-3">
+            {puedeEditar && (
+              <button
+                onClick={() => navigate(`/reclamos/${reclamo.id}/editar`)}
+                className="bg-gray-100 hover:bg-gray-200 text-text text-sm font-medium rounded-lg px-3 py-1.5 transition-colors"
+              >
+                Editar
+              </button>
+            )}
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                {
+                  abierto: "bg-warning-soft text-warning",
+                  respondido: "bg-primary-light text-primary-dark",
+                  cerrado: "bg-success-soft text-success",
+                  cerrado_sin_respuesta: "bg-gray-100 text-muted",
+                }[reclamo.estado]
+              }`}
+            >
+              {ETIQUETAS_ESTADO[reclamo.estado]}
+            </span>
+          </div>
         </div>
 
         {fueraDePlazo && (
@@ -203,6 +234,40 @@ export default function DetalleReclamo() {
               Motivo de cierre sin respuesta
             </dt>
             <dd className="text-text">{reclamo.motivo_cierre}</dd>
+          </div>
+        )}
+
+        {historial.length > 0 && (
+          <div className="border-t border-border pt-4">
+            <h2 className="text-sm font-medium text-text mb-2">
+              Historial de ediciones
+            </h2>
+            <ul className="space-y-3">
+              {historial.map((h) => (
+                <li key={h.id} className="text-sm">
+                  <p className="text-xs text-muted">
+                    {h.usuario_nombre ?? "—"} ·{" "}
+                    {new Date(h.fecha).toLocaleString("es-CL", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                  <ul className="mt-1 space-y-1">
+                    {Object.entries(h.cambios).map(([campo, c]) => (
+                      <li key={campo} className="text-text break-words">
+                        <span className="font-medium">
+                          {ETIQUETAS_CAMPO[campo] ?? campo}:
+                        </span>{" "}
+                        <span className="text-muted line-through">
+                          {formatearValor(c.antes)}
+                        </span>{" "}
+                        → <span>{formatearValor(c.despues)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

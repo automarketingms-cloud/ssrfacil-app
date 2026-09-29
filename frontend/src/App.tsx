@@ -20,6 +20,7 @@ import ReporteContinuidad from "./pages/ReporteContinuidad";
 import ListarReclamos from "./pages/ListarReclamos";
 import RegistrarReclamo from "./pages/RegistrarReclamo";
 import DetalleReclamo from "./pages/DetalleReclamo";
+import EditarReclamo from "./pages/EditarReclamo";
 import ReporteReclamos from "./pages/ReporteReclamos";
 import Dashboard from "./pages/Dashboard";
 import Facturacion from "./pages/Facturacion";
@@ -245,6 +246,14 @@ export default function App() {
               element={
                 <RutaProtegida rolesPermitidos={["admin", "oficina"]}>
                   <DetalleReclamo />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/reclamos/:id/editar"
+              element={
+                <RutaProtegida rolesPermitidos={["admin", "oficina"]}>
+                  <EditarReclamo />
                 </RutaProtegida>
               }
             />

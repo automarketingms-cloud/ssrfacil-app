@@ -10,7 +10,6 @@ class ReclamoCreate(BaseModel):
     direccion_reclamo: Optional[str] = None
     tipo_reclamo: str
     descripcion: str
-    fecha_recepcion: Optional[datetime] = None  # si no se envía, se usa el momento actual
     observaciones: Optional[str] = None
 
     @model_validator(mode="after")
@@ -28,6 +27,27 @@ class ReclamoResponder(BaseModel):
 
 class ReclamoCerrarDirecto(BaseModel):
     motivo: str
+
+
+
+class ReclamoUpdate(BaseModel):
+    """Todos opcionales: solo se modifican los campos que vienen en el request."""
+    cliente_id: Optional[int] = None
+    nombre_reclamante: Optional[str] = None
+    rut_reclamante: Optional[str] = None
+    direccion_reclamo: Optional[str] = None
+    tipo_reclamo: Optional[str] = None
+    descripcion: Optional[str] = None
+    observaciones: Optional[str] = None
+    respuesta: Optional[str] = None
+
+    @field_validator("tipo_reclamo", "descripcion", "respuesta")
+    @classmethod
+    def no_vacio(cls, v):
+        # solo se ejecuta si el campo viene en el request
+        if v is None or not v.strip():
+            raise ValueError("Este campo no puede quedar vacío")
+        return v
 
 class ReclamoResponse(BaseModel):
     id: int
@@ -48,6 +68,9 @@ class ReclamoResponse(BaseModel):
     fuera_de_plazo: Optional[bool]
     motivo_cierre: Optional[str]
     observaciones: Optional[str]
+    editado_por_id: Optional[int] = None
+    editado_por_nombre: Optional[str] = None
+    fecha_edicion: Optional[datetime] = None
 
     class Config:
         from_attributes = True
