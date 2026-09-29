@@ -389,6 +389,7 @@ export interface Reclamo {
   direccion_reclamo: string | null;
   tipo_reclamo: string;
   descripcion: string;
+  fecha_recepcion: string;
   plazo_vencimiento: string;
   estado: "abierto" | "respondido" | "cerrado" | "cerrado_sin_respuesta";
   fecha_respuesta: string | null;
@@ -428,7 +429,6 @@ export interface ReclamoCreate {
   direccion_reclamo?: string;
   tipo_reclamo: string;
   descripcion: string;
-  fecha_recepcion?: string;
   observaciones?: string;
 }
 
