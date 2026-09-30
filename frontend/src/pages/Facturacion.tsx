@@ -3,13 +3,7 @@ import { FileText, Loader2, AlertTriangle } from "lucide-react";
 import { generarFacturasPeriodo, listarFacturas } from "../api/facturas";
 import type { Factura, ResumenGeneracionFacturas } from "../types";
 import { Link } from "react-router-dom";
-
-function periodoActual(): string {
-  const hoy = new Date();
-  const anio = hoy.getFullYear();
-  const mes = String(hoy.getMonth() + 1).padStart(2, "0");
-  return `${anio}-${mes}`;
-}
+import { hoyChileISO, periodoActualChile } from "../utils/fechas";
 
 function formatearMonto(valor: number): string {
   return valor.toLocaleString("es-CL", {
@@ -20,7 +14,7 @@ function formatearMonto(valor: number): string {
 }
 
 function hoyStr(): string {
-  return new Date().toLocaleDateString("sv-SE");
+  return hoyChileISO();
 }
 
 function corteEnTramite(f: Factura): boolean {
@@ -40,7 +34,7 @@ const ESTADO_STYLES: Record<string, string> = {
 };
 
 export default function Facturacion() {
-  const [periodo, setPeriodo] = useState(periodoActual());
+  const [periodo, setPeriodo] = useState(periodoActualChile());
   const [estadoFiltro, setEstadoFiltro] = useState("");
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [loading, setLoading] = useState(true);

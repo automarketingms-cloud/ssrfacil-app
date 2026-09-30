@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, Float, String, Date, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from datetime import datetime, timezone
 from app.core.database import Base
+from app.utils.fechas import ahora
 
 
 class Pago(Base):
@@ -18,7 +18,7 @@ class Pago(Base):
     referencia = Column(String, nullable=True)
     observaciones = Column(String, nullable=True)
 
-    creado_en = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    creado_en = Column(DateTime(timezone=True), default=ahora)
 
     factura = relationship("Factura")
     caja = relationship("Caja")  # NUEVO

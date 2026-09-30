@@ -5,8 +5,9 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import { listarClientes } from "../api/clientes";
 import { crearLectura, crearLecturaTerminoMedio } from "../api/lecturas";
 import type { Cliente } from "../types";
+import { hoyChileISO } from "../utils/fechas";
 
-const today = new Date().toLocaleDateString("sv-SE");
+const today = hoyChileISO();
 const currentPeriodo = today.slice(0, 7); // "2026-07"
 
 const initialForm = {

@@ -18,22 +18,13 @@ import {
   obtenerHistorialCajas,
 } from "../api/cajas";
 import type { Caja, CajaResumen } from "../types";
+import { formatearFechaHora } from "../utils/fechas";
 
 function formatearMonto(valor: number): string {
   return valor.toLocaleString("es-CL", {
     style: "currency",
     currency: "CLP",
     maximumFractionDigits: 0,
-  });
-}
-
-function formatearFechaHora(iso: string): string {
-  return new Date(iso).toLocaleString("es-CL", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 }
 

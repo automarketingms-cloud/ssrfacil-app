@@ -5,13 +5,14 @@ import {
   actualizarLecturaMatriz,
   obtenerFotoLecturaMatriz,
 } from "../api/lecturaMatriz";
+import { anioActualChile } from "../utils/fechas";
 
 export default function HistorialLecturaMatriz() {
   const [lecturas, setLecturas] = useState<LecturaMatriz[]>([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [anio, setAnio] = useState(new Date().getFullYear());
+  const [anio, setAnio] = useState(anioActualChile());
 
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [formEdit, setFormEdit] = useState<LecturaMatrizUpdate>({});
@@ -107,9 +108,9 @@ export default function HistorialLecturaMatriz() {
         >
           ›
         </button>
-        {anio !== new Date().getFullYear() && (
+        {anio !== anioActualChile() && (
           <button
-            onClick={() => setAnio(new Date().getFullYear())}
+            onClick={() => setAnio(anioActualChile())}
             className="text-sm font-medium text-primary-dark hover:underline ml-1"
           >
             Volver al año actual

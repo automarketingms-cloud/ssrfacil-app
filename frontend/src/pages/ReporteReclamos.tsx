@@ -5,8 +5,9 @@ import {
   descargarReporteReclamosPdf,
 } from "../api/reportes";
 import type { ReporteReclamos as ReporteReclamosType } from "../types";
+import { periodoActualChile } from "../utils/fechas";
 
-const mesActual = new Date().toLocaleDateString("sv-SE").slice(0, 7);
+const mesActual = periodoActualChile();
 
 const ETIQUETAS_ESTADO: Record<string, string> = {
   abierto: "Abierto",

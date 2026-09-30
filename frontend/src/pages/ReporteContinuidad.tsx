@@ -6,8 +6,9 @@ import {
 } from "../api/reportes";
 import type { ReporteContinuidad as ReporteContinuidadType } from "../types";
 import BotonVolver from "../components/BotonVolver";
+import { periodoActualChile, formatearFechaHora } from "../utils/fechas";
 
-const mesActual = new Date().toLocaleDateString("sv-SE").slice(0, 7);
+const mesActual = periodoActualChile();
 
 function formatearDuracion(horas: number | null | undefined): string {
   if (horas == null) return "—";
@@ -218,12 +219,12 @@ function TablaCortes({
           {cortes.map((c) => (
             <tr key={c.id} className="border-t border-border">
               <td className="px-4 py-2">
-                {new Date(c.fecha_hora_inicio).toLocaleString()}
+                {formatearFechaHora(c.fecha_hora_inicio)}
               </td>
               {!activo && (
                 <td className="px-4 py-2">
                   {c.fecha_hora_termino
-                    ? new Date(c.fecha_hora_termino).toLocaleString()
+                    ? formatearFechaHora(c.fecha_hora_termino)
                     : "—"}
                 </td>
               )}

@@ -26,13 +26,7 @@ import {
 import { obtenerResumenDashboard } from "../api/dashboard";
 import { obtenerAlertasFolios } from "../api/caf";
 import type { ResumenDashboard, AlertaFolio } from "../types";
-
-function periodoActual(): string {
-  const hoy = new Date();
-  const anio = hoy.getFullYear();
-  const mes = String(hoy.getMonth() + 1).padStart(2, "0");
-  return `${anio}-${mes}`;
-}
+import { periodoActualChile } from "../utils/fechas";
 
 function formatearMonto(valor: number): string {
   return valor.toLocaleString("es-CL", {
@@ -73,7 +67,7 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
       try {
-        const data = await obtenerResumenDashboard(periodoActual());
+        const data = await obtenerResumenDashboard(periodoActualChile());
         setResumen(data);
       } catch (err) {
         setError(

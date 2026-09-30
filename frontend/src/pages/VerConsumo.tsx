@@ -5,8 +5,9 @@ import { listarClientes } from "../api/clientes";
 import { obtenerConsumo } from "../api/consumos";
 import type { Cliente, ConsumoResponse } from "../types";
 import { formatoCLP } from "../utils/formato";
+import { periodoActualChile } from "../utils/fechas";
 
-const currentPeriodo = new Date().toLocaleDateString("sv-SE").slice(0, 7);
+const currentPeriodo = periodoActualChile();
 
 export default function VerConsumo() {
   const [clientes, setClientes] = useState<Cliente[]>([]);

@@ -16,29 +16,13 @@ import {
 import { useAuth } from "../context/AuthContext";
 import type { DetalleCaja } from "../types";
 import BotonVolver from "../components/BotonVolver";
+import { formatearFechaHora, formatearHora } from "../utils/fechas";
 
 function formatearMonto(valor: number): string {
   return valor.toLocaleString("es-CL", {
     style: "currency",
     currency: "CLP",
     maximumFractionDigits: 0,
-  });
-}
-
-function formatearFechaHora(iso: string): string {
-  return new Date(iso).toLocaleString("es-CL", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatearHora(iso: string): string {
-  return new Date(iso).toLocaleTimeString("es-CL", {
-    hour: "2-digit",
-    minute: "2-digit",
   });
 }
 

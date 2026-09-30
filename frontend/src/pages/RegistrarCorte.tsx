@@ -5,6 +5,8 @@ import type { CorteResponse } from "../types";
 import Input from "../components/Input";
 import Textarea from "../components/Textarea";
 import Select from "../components/Select";
+import { formatearFechaHora } from "../utils/fechas";
+
 export default function RegistrarCorte() {
   const [cortesAbiertos, setCortesAbiertos] = useState<CorteResponse[]>([]);
   const [cargando, setCargando] = useState(false);
@@ -210,7 +212,7 @@ export default function RegistrarCorte() {
                   </p>
                   <p className="text-sm text-muted">
                     {corte.causa} — desde{" "}
-                    {new Date(corte.fecha_hora_inicio).toLocaleString()}
+                    {formatearFechaHora(corte.fecha_hora_inicio)}
                   </p>
                 </div>
                 <button

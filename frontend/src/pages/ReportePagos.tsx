@@ -6,8 +6,9 @@ import {
 import { listarUsuarios } from "../api/usuarios";
 import type { ReportePagos as ReportePagosType, Usuario } from "../types";
 import BotonVolver from "../components/BotonVolver";
+import { hoyChileISO } from "../utils/fechas";
 
-const hoy = new Date().toLocaleDateString("sv-SE"); // "YYYY-MM-DD" en hora local
+const hoy = hoyChileISO();
 
 export default function ReportePagos() {
   const [desde, setDesde] = useState(hoy);

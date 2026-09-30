@@ -3,16 +3,11 @@ import { crearLecturaMatriz } from "../api/lecturaMatriz";
 import { obtenerConfiguracion } from "../api/configuracion";
 import { aNumeroOVacio } from "../utils/numero";
 import ConfirmDialog from "../components/ConfirmDialog";
-
-function periodoActual(): string {
-  const hoy = new Date();
-  const mes = String(hoy.getMonth() + 1).padStart(2, "0");
-  return `${hoy.getFullYear()}-${mes}`;
-}
+import { hoyChileISO, periodoActualChile } from "../utils/fechas";
 
 const initialForm = {
-  periodo: periodoActual(),
-  fecha_lectura: new Date().toLocaleDateString("sv-SE"),
+  periodo: periodoActualChile(),
+  fecha_lectura: hoyChileISO(),
   lectura_actual: undefined as number | undefined,
   observaciones: "",
 };
@@ -101,7 +96,7 @@ export default function RegistrarLecturaMatriz() {
       });
       setExito(true);
       setMostrarConfirmacion(false);
-      setForm({ ...initialForm, periodo: periodoActual() });
+      setForm({ ...initialForm, periodo: periodoActualChile() });
       quitarFoto();
     } catch (err) {
       setError(

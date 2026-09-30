@@ -12,23 +12,17 @@ import type {
 } from "../types";
 import GaugeCircular from "../components/GaugeCircular";
 import BotonVolver from "../components/BotonVolver";
-
-function periodoActual(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
-}
+import { periodoActualChile, anioActualChile } from "../utils/fechas";
 
 export default function ComparativaAgua() {
-  const [periodo, setPeriodo] = useState(periodoActual());
+  const [periodo, setPeriodo] = useState(periodoActualChile());
   const [comparativa, setComparativa] = useState<ComparativaAguaType | null>(
     null,
   );
   const [historico, setHistorico] = useState<ComparativaAguaType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [anio, setAnio] = useState(String(new Date().getFullYear()));
+  const [anio, setAnio] = useState(String(anioActualChile()));
   const [comparativaAnual, setComparativaAnual] =
     useState<ComparativaAnual | null>(null);
   const [comparativaTotal, setComparativaTotal] =
@@ -177,7 +171,7 @@ export default function ComparativaAgua() {
                 className="rounded-md border border-border bg-surface px-2 py-1 text-sm text-text"
               >
                 {Array.from({ length: 5 }, (_, i) =>
-                  String(new Date().getFullYear() - i),
+                  String(anioActualChile() - i),
                 ).map((a) => (
                   <option key={a} value={a}>
                     {a}

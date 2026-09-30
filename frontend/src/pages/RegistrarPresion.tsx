@@ -4,6 +4,7 @@ import { listarReclamos } from "../api/reclamos";
 import type { MedicionPresion, Reclamo } from "../types";
 import Input from "../components/Input";
 import Textarea from "../components/Textarea";
+import { horaChile } from "../utils/fechas";
 
 export default function RegistrarPresion() {
   const [historial, setHistorial] = useState<MedicionPresion[]>([]);
@@ -77,7 +78,7 @@ export default function RegistrarPresion() {
 
     setCargando(true);
     try {
-      const horaActual = new Date().toTimeString().slice(0, 8); // "HH:MM:SS"
+      const horaActual = horaChile(); // "HH:MM:SS"
 
       await crearMedicionPresion({
         punto_medicion: form.punto_medicion,

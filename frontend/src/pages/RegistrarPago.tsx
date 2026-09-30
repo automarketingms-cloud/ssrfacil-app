@@ -15,6 +15,8 @@ import type {
   PagoDelDia,
 } from "../types";
 
+import { hoyChileISO } from "../utils/fechas";
+
 function formatearMonto(valor: number): string {
   return valor.toLocaleString("es-CL", {
     style: "currency",
@@ -24,7 +26,7 @@ function formatearMonto(valor: number): string {
 }
 
 function hoyISO(): string {
-  return new Date().toLocaleDateString("sv-SE");
+  return hoyChileISO();
 }
 
 // Redondeo a la unidad de peso (CLP no tiene decimales) — mismo criterio

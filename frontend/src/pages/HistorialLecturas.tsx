@@ -6,15 +6,16 @@ import {
   editarLectura,
   obtenerFotoLectura,
 } from "../api/lecturas";
+import { periodoActualChile, anioActualChile } from "../utils/fechas";
 
 const LIMIT = 500;
 
 function periodoActual(): string {
-  return new Date().toLocaleDateString("sv-SE").slice(0, 7);
+  return periodoActualChile();
 }
 
 function anioActual(): number {
-  return new Date().getFullYear();
+  return anioActualChile();
 }
 
 type ModoVista = "mes" | "anio";

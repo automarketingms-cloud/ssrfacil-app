@@ -11,8 +11,8 @@ from sqlalchemy import (
     JSON
 )
 from sqlalchemy.orm import relationship
-from datetime import datetime, timezone
 from app.core.database import Base
+from app.utils.fechas import ahora
 
 
 class Factura(Base):
@@ -65,7 +65,7 @@ class Factura(Base):
     estado_envio_sii = Column(String, nullable=True)  # "pendiente" | "enviado" | "error"
     url_pdf_sii = Column(String, nullable=True)
 
-    creado_en = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    creado_en = Column(DateTime(timezone=True), default=ahora)
 
     cliente = relationship("Cliente")
     empresa = relationship("Empresa")
