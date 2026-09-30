@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import date
 
 from app.models.cliente import Cliente
 from app.models.reclamo import Reclamo
@@ -10,6 +9,7 @@ from app.models.presion import MedicionPresion
 from app.models.lectura import Lectura
 from sqlalchemy import case
 from app.services.continuidad import contar_cortes_activos
+from app.utils.fechas import hoy_chile
 
 
 def _periodos_anteriores(periodo: str, cantidad: int) -> list[str]:
@@ -81,7 +81,7 @@ def construir_resumen_dashboard(db: Session, periodo: str, empresa_id: int) -> d
     medidores_sin_lectura = max(total_clientes_activos - lecturas_realizadas, 0)
 
     # --- Reclamos ---
-    hoy = date.today()
+    hoy = hoy_chile()
     total_reclamos_abiertos = (
         db.query(func.count(Reclamo.id))
         .filter(Reclamo.estado == "abierto", Reclamo.empresa_id == empresa_id)

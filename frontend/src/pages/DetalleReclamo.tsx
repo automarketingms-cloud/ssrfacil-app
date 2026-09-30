@@ -12,10 +12,11 @@ import type { Reclamo, HistorialEdicion } from "../types";
 
 import Textarea from "../components/Textarea";
 import BotonVolver from "../components/BotonVolver";
-
-function hoyISO() {
-  return new Date().toLocaleDateString("sv-SE");
-}
+import {
+  formatearFecha,
+  formatearFechaHora,
+  hoyChileISO,
+} from "../utils/fechas";
 
 const ETIQUETAS_ESTADO: Record<string, string> = {
   abierto: "Abierto",
@@ -128,7 +129,7 @@ export default function DetalleReclamo() {
     return <div className="p-6 text-red-600">Reclamo no encontrado</div>;
 
   const fueraDePlazo =
-    reclamo.estado === "abierto" && reclamo.plazo_vencimiento < hoyISO();
+    reclamo.estado === "abierto" && reclamo.plazo_vencimiento < hoyChileISO();
 
   const puedeEditar =
     reclamo.estado === "abierto" || reclamo.estado === "respondido";
@@ -169,7 +170,7 @@ export default function DetalleReclamo() {
         {fueraDePlazo && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded px-3 py-2">
             Este reclamo está fuera del plazo normativo de respuesta (venció el{" "}
-            {reclamo.plazo_vencimiento}).
+            {formatearFecha(reclamo.plazo_vencimiento)}).
           </div>
         )}
 
@@ -193,12 +194,14 @@ export default function DetalleReclamo() {
           <div>
             <dt className="text-muted">Fecha recepción</dt>
             <dd className="text-text">
-              {reclamo.fecha_recepcion.slice(0, 10)}
+              {formatearFechaHora(reclamo.fecha_recepcion)}
             </dd>
           </div>
           <div>
             <dt className="text-muted">Plazo vencimiento</dt>
-            <dd className="text-text">{reclamo.plazo_vencimiento}</dd>
+            <dd className="text-text">
+              {formatearFecha(reclamo.plazo_vencimiento)}
+            </dd>
           </div>
         </dl>
 
@@ -219,7 +222,7 @@ export default function DetalleReclamo() {
             <dt className="text-muted text-sm">Respuesta</dt>
             <dd className="text-text">{reclamo.respuesta}</dd>
             <p className="text-xs text-muted mt-1">
-              Respondido el {reclamo.fecha_respuesta?.slice(0, 10)} —{" "}
+              Respondido el {formatearFecha(reclamo.fecha_respuesta)} —{" "}
               {reclamo.dias_habiles_respuesta} días hábiles
               {reclamo.fuera_de_plazo
                 ? " (fuera de plazo)"
@@ -246,11 +249,7 @@ export default function DetalleReclamo() {
               {historial.map((h) => (
                 <li key={h.id} className="text-sm">
                   <p className="text-xs text-muted">
-                    {h.usuario_nombre ?? "—"} ·{" "}
-                    {new Date(h.fecha).toLocaleString("es-CL", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
+                    {h.usuario_nombre ?? "—"} · {formatearFechaHora(h.fecha)}
                   </p>
                   <ul className="mt-1 space-y-1">
                     {Object.entries(h.cambios).map(([campo, c]) => (

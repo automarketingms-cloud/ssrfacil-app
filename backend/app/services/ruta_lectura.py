@@ -11,10 +11,11 @@ from reportlab.lib.styles import getSampleStyleSheet
 
 from app.models.cliente import Cliente
 from app.models.lectura import Lectura
+from app.utils.fechas import hoy_chile
 
 
 def obtener_periodo_actual() -> str:
-    hoy = date.today()
+    hoy = hoy_chile()
     return f"{hoy.year}-{hoy.month:02d}"
 
 

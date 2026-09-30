@@ -20,12 +20,12 @@ class Reclamo(Base):
     tipo_reclamo = Column(String, nullable=False)
     descripcion = Column(Text, nullable=False)
 
-    fecha_recepcion = Column(DateTime, nullable=False)
+    fecha_recepcion = Column(DateTime(timezone=True), nullable=False)
     plazo_vencimiento = Column(Date, nullable=False)
 
     estado = Column(String, nullable=False, default="abierto")  # abierto | respondido | cerrado
 
-    fecha_respuesta = Column(DateTime, nullable=True)
+    fecha_respuesta = Column(DateTime(timezone=True), nullable=True)
     respuesta = Column(Text, nullable=True)
     dias_habiles_respuesta = Column(Integer, nullable=True)
     fuera_de_plazo = Column(Boolean, nullable=True)

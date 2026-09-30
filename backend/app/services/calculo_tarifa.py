@@ -4,6 +4,7 @@ from app.models.tarifa import Tarifa, TarifaTramo
 from app.models.cliente import Cliente
 
 from datetime import date
+from app.utils.fechas import hoy_chile
 
 # IVA vigente en Chile (DL 825). Si cambia por ley, se ajusta solo aquí.
 TASA_IVA = 19.0
@@ -194,7 +195,7 @@ def validar_periodo_no_futuro(periodo: str) -> None:
     Rechaza el registro de una lectura para un periodo posterior al
     mes/año actual. Formato periodo: "YYYY-MM".
     """
-    periodo_actual = date.today().strftime("%Y-%m")
+    periodo_actual = hoy_chile().strftime("%Y-%m")
     if periodo > periodo_actual:
         raise ValueError(
             f"No se puede registrar una lectura para el periodo {periodo}: "

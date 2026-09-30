@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum as SAEnum, ForeignKey
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+from app.utils.fechas import ahora
 
 
 class RolUsuario(str, enum.Enum):
@@ -22,6 +23,6 @@ class Usuario(Base):
     password_hash = Column(String, nullable=False)
     rol = Column(SAEnum(RolUsuario), nullable=False, default=RolUsuario.TERRENO)
     activo = Column(Boolean, default=True, nullable=False)
-    fecha_creacion = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    fecha_creacion = Column(DateTime(timezone=True), default=ahora)
 
     empresa = relationship("Empresa")

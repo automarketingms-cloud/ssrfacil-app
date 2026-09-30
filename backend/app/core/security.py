@@ -2,6 +2,7 @@ import os
 import jwt
 from datetime import datetime, timedelta, timezone
 from pwdlib import PasswordHash
+from app.utils.fechas import ahora
 
 password_hash = PasswordHash.recommended()  # Argon2 por defecto
 
@@ -20,7 +21,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def crear_access_token(usuario) -> str:
     to_encode = {"sub": str(usuario.id), "empresa_id": usuario.empresa_id}
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = ahora() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 

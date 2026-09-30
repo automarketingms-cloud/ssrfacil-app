@@ -23,6 +23,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 from app.services.configuracion import obtener_configuracion
 from app.services.pago import calcular_saldo_factura
+from app.utils.fechas import hoy_chile, ahora
 
 
 def generar_factura(db: Session, cliente_id: int, periodo: str, empresa_id: int) -> Factura:
@@ -34,7 +35,7 @@ def generar_factura(db: Session, cliente_id: int, periodo: str, empresa_id: int)
     if ya_existe:
         raise ValueError("Ya existe una factura para este cliente en este periodo")
 
-    periodo_actual = date.today().strftime("%Y-%m")
+    periodo_actual = hoy_chile().strftime("%Y-%m")
     if periodo > periodo_actual:
         raise ValueError(f"No se puede facturar el periodo {periodo}: es un periodo futuro")
 
@@ -78,7 +79,7 @@ def generar_factura(db: Session, cliente_id: int, periodo: str, empresa_id: int)
 
     desglose = calcular_total_a_pagar(consumo_a_facturar, tarifa, cliente)
 
-    fecha_emision = date.today()
+    fecha_emision = hoy_chile()
     fecha_vencimiento = fecha_emision + timedelta(days=config.dias_plazo_pago)
 
     saldo_anterior, interes_mora = calcular_saldo_anterior_e_interes(
@@ -148,7 +149,7 @@ def calcular_saldo_anterior_e_interes(
 
     saldo_anterior = 0.0
     interes_mora = 0.0
-    hoy = date.today()
+    hoy = hoy_chile()
 
     for factura in facturas_pendientes:
         saldo = calcular_saldo_factura(db, factura)
@@ -239,10 +240,10 @@ def aplicar_ajuste_credito_m3(cliente: Cliente, consumo_medido: float) -> tuple[
 def generar_facturas_periodo(db: Session, periodo: str, empresa_id: int) -> dict:
     config = obtener_configuracion(db, empresa_id)
 
-    periodo_actual = date.today().strftime("%Y-%m")
+    periodo_actual = hoy_chile().strftime("%Y-%m")
     es_periodo_actual = periodo == periodo_actual
 
-    if es_periodo_actual and date.today().day < config.dia_facturacion:
+    if es_periodo_actual and hoy_chile().day < config.dia_facturacion:
         raise ValueError(
             f"Aún no se puede facturar el período actual: la emisión habilita desde el día {config.dia_facturacion} del mes"
         )
@@ -318,7 +319,7 @@ def actualizar_facturas_vencidas(db: Session) -> int:
     al entrar a la pantalla de facturación/morosos. Devuelve la cantidad
     de facturas actualizadas.
     """
-    hoy = date.today()
+    hoy = hoy_chile()
     vencidas = (
         db.query(Factura)
         .filter(Factura.estado == "pendiente", Factura.fecha_vencimiento < hoy)
@@ -661,7 +662,7 @@ def construir_reporte_facturacion(periodo: str, db: Session, empresa_id: int) ->
         corte_en_tramite = bool(
             factura.fecha_limite_corte
             and factura.estado != "pagada"
-            and date.today() >= factura.fecha_limite_corte
+            and hoy_chile() >= factura.fecha_limite_corte
         )
 
         factura_anterior = factura_anterior_por_cliente.get(factura.cliente_id)
@@ -741,7 +742,7 @@ def construir_excel_reporte_facturacion(periodo: str, db: Session, empresa_id: i
     ws["A5"] = f"Total recaudado: ${reporte['total_recaudado']:,.0f}"
     ws["A6"] = f"Teléfono de atención: {reporte['telefono_atencion'] or '—'}"
     ws["A7"] = f"Horario de atención: {reporte['horario_atencion'] or '—'}"
-    ws["A8"] = f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}"
+    ws["A8"] = f"Generado: {ahora().strftime('%d-%m-%Y %H:%M')}"
 
     headers = [
         "RUT", "Nombre", "Dirección", "N° Medidor", "Socio", "Subsidio",
@@ -823,7 +824,7 @@ def construir_pdf_reporte_facturacion(periodo: str, db: Session, empresa_id: int
         f"Teléfono: {reporte['telefono_atencion'] or '—'} | Horario: {reporte['horario_atencion'] or '—'}",
         styles["Normal"]
     ))
-    elementos.append(Paragraph(f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
+    elementos.append(Paragraph(f"Generado: {ahora().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
     elementos.append(Spacer(1, 0.5 * cm))
 
     data = [["RUT", "Nombre", "N° Medidor", "Consumo m3", "Subtotal", "Subsidio", "Saldo Anterior", "Total a Pagar", "Vencimiento"]]

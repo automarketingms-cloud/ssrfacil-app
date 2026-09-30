@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.factura import Factura
 from app.models.nota_credito import NotaCredito
 from app.models.usuario import Usuario
+from app.utils.fechas import hoy_chile
 
 
 def anular_factura(
@@ -38,7 +39,7 @@ def anular_factura(
         empresa_id=empresa_id,
         factura_id=factura.id,
         motivo=motivo.strip(),
-        fecha_emision=date.today(),
+        fecha_emision=hoy_chile(),
         anulado_por_id=usuario.id,
         tipo_dte_referencia=factura.tipo_dte,
         folio_referencia=factura.folio_sii,

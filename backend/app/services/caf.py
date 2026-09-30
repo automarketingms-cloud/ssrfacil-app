@@ -2,9 +2,9 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.models.caf_sii import CafSii
 
-from datetime import datetime
 from app.services.storage import subir_archivo, BUCKET_CAF_SII
 from app.utils.caf_parser import parsear_caf
+from app.utils.fechas import ahora
 
 
 def obtener_caf_activo(db: Session, empresa_id: int, tipo_dte: str) -> CafSii | None:
@@ -115,7 +115,7 @@ def subir_caf(db: Session, empresa_id: int, contenido: bytes, rut_empresa_espera
     if existe:
         raise HTTPException(status_code=400, detail="Este CAF ya fue cargado anteriormente")
 
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    timestamp = ahora().strftime("%Y%m%d%H%M%S")
     nombre_archivo = f"{empresa_id}/{datos['tipo_dte']}_{datos['folio_desde']}_{datos['folio_hasta']}_{timestamp}.xml"
     ruta = subir_archivo(BUCKET_CAF_SII, contenido, nombre_archivo, "application/xml")
 

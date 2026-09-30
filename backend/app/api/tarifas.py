@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import get_current_user, require_roles
+from app.core.deps import require_roles
 from app.models.usuario import Usuario, RolUsuario
 from app.models.tarifa import Tarifa, TarifaTramo
 from app.models.lectura import Lectura
@@ -10,6 +10,7 @@ from app.schemas.tarifa import TarifaCreate, TarifaResponse
 
 from datetime import date
 from app.services.calculo_tarifa import obtener_tarifa_vigente
+from app.utils.fechas import hoy_chile
 
 router = APIRouter(prefix="/tarifas", tags=["Tarifas"])
 
@@ -57,7 +58,7 @@ def obtener_tarifa_actual(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
 ):
-    hoy = date.today().strftime("%Y-%m")
+    hoy = hoy_chile().strftime("%Y-%m")
     try:
         return obtener_tarifa_vigente(db, hoy, current_user.empresa_id)
     except ValueError as e:

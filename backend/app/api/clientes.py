@@ -9,6 +9,7 @@ from app.core.deps import get_current_user, require_roles
 from app.models.cliente import Cliente
 from app.models.usuario import Usuario, RolUsuario
 from app.schemas.cliente import ClienteResponse, ClienteCreate, ClienteUpdate, ClienteListResponse
+from app.utils.fechas import hoy_chile
 
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
 
@@ -20,7 +21,7 @@ def crear_cliente(
     usuario: Usuario = Depends(require_roles(RolUsuario.ADMIN, RolUsuario.OFICINA)),
 ):
     datos = cliente.model_dump()
-    datos["fecha_ingreso"] = date.today()
+    datos["fecha_ingreso"] = hoy_chile()
     datos["empresa_id"] = usuario.empresa_id
 
     nuevo_cliente = Cliente(**datos)

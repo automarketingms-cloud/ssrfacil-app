@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from io import BytesIO
 from xml.sax.saxutils import escape
-from zoneinfo import ZoneInfo
+from app.utils.fechas import TZ_CHILE, ahora
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import cm
@@ -14,10 +14,6 @@ from sqlalchemy.orm import Session
 from app.models.caja import Caja
 from app.models.pago import Pago
 from app.models.usuario import Usuario, RolUsuario
-
-
-
-TZ_CHILE = ZoneInfo("America/Santiago")
 
 
 def _fecha_chile(dt: datetime | None, formato: str = "%d-%m-%Y %H:%M") -> str:
@@ -110,7 +106,7 @@ def cerrar_caja(
 
     caja.monto_efectivo_esperado = monto_esperado
     caja.observaciones_cierre = observaciones_cierre
-    caja.fecha_cierre = datetime.now(timezone.utc)
+    caja.fecha_cierre = ahora()
     caja.estado = "cerrada"
 
     db.commit()
@@ -144,7 +140,7 @@ def editar_monto_inicial(
 
     caja.monto_inicial = nuevo_monto
     caja.monto_inicial_editado_por_id = usuario_actual.id
-    caja.fecha_edicion_monto_inicial = datetime.now(timezone.utc)
+    caja.fecha_edicion_monto_inicial = ahora()
     caja.motivo_edicion_monto_inicial = motivo.strip()
 
     # Si la caja ya estaba cerrada, el efectivo esperado se calculó con el
@@ -178,7 +174,7 @@ def realizar_arqueo(
 
     caja.observaciones_arqueo = observaciones_arqueo
     caja.arqueado_por_id = usuario_actual.id
-    caja.fecha_arqueo = datetime.now(timezone.utc)
+    caja.fecha_arqueo = ahora()
 
     db.commit()
     db.refresh(caja)
@@ -305,7 +301,7 @@ def construir_pdf_arqueo_caja(db: Session, caja_id: int, usuario_actual: Usuario
             styles["Normal"],
         ))
 
-    elementos.append(Paragraph(f"Generado: {datetime.now(TZ_CHILE).strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
+    elementos.append(Paragraph(f"Generado: {ahora().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
     elementos.append(Spacer(1, 0.5 * cm))
 
     # Detalle de pagos del turno

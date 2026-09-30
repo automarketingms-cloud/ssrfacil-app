@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from app.core.database import Base
+from app.utils.fechas import ahora
 
 
 class Caja(Base):
@@ -11,7 +12,7 @@ class Caja(Base):
     empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
     cajero_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
 
-    fecha_apertura = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    fecha_apertura = Column(DateTime(timezone=True), default=ahora, nullable=False)
     monto_inicial = Column(Float, nullable=False)
     # Auditoría de corrección del monto inicial (todo null si nunca se corrigió)
     monto_inicial_original = Column(Float, nullable=True)

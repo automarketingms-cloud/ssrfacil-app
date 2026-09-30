@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { listarReclamos } from "../api/reclamos";
 import type { Reclamo } from "../types";
+import { formatearFecha, hoyChileISO } from "../utils/fechas";
 
 const ESTADOS = [
   { value: "", label: "Todos" },
@@ -11,12 +12,11 @@ const ESTADOS = [
   { value: "cerrado_sin_respuesta", label: "Cerrado sin respuesta" },
 ];
 
-function hoyISO() {
-  return new Date().toLocaleDateString("sv-SE");
-}
-
 function badgeEstado(reclamo: Reclamo) {
-  if (reclamo.estado === "abierto" && reclamo.plazo_vencimiento < hoyISO()) {
+  if (
+    reclamo.estado === "abierto" &&
+    reclamo.plazo_vencimiento < hoyChileISO()
+  ) {
     return (
       <span className="px-2 py-1 rounded-full text-xs font-medium bg-danger-soft text-danger">
         Fuera de plazo
@@ -141,7 +141,7 @@ export default function ListarReclamos() {
                     <td className="px-4 py-2">{r.nombre_reclamante ?? "—"}</td>
                     <td className="px-4 py-2">{r.tipo_reclamo}</td>
                     <td className="px-4 py-2">
-                      {r.fecha_recepcion.slice(0, 10)}
+                      {formatearFecha(r.fecha_recepcion)}
                     </td>
                     <td className="px-4 py-2">{badgeEstado(r)}</td>
                   </tr>

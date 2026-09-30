@@ -13,6 +13,7 @@ from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
+from app.utils.fechas import ahora
 
 # Rango vigente: NCh 691:2015, DS MOP N°7 y N°14 de 2016 (15 a 70 mca)
 # Rango anterior: según criterio interno indicado (8 a 40 mca antes de 2020)
@@ -72,7 +73,7 @@ def construir_excel_reporte_presion(desde: Optional[date], hasta: Optional[date]
     ws["A1"].font = Font(size=14, bold=True)
     ws["A2"] = f"Desde: {desde or 'sin límite'}  Hasta: {hasta or 'sin límite'}"
     ws["A3"] = f"Mediciones: {len(datos)}"
-    ws["A4"] = f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}"
+    ws["A4"] = f"Generado: {ahora().strftime('%d-%m-%Y %H:%M')}"
 
     headers = ["Punto", "Ubicación", "Fecha", "Hora", "Presión (mca)", "Rango mínimo", "Rango máximo", "Cumple", "Observaciones"]
     header_row = 6
@@ -117,7 +118,7 @@ def construir_pdf_reporte_presion(desde: Optional[date], hasta: Optional[date], 
     elementos.append(Paragraph("Reporte de Presión de Servicio", styles["Title"]))
     elementos.append(Paragraph(f"Desde: {desde or 'sin límite'} | Hasta: {hasta or 'sin límite'}", styles["Normal"]))
     elementos.append(Paragraph(f"Mediciones: {len(datos)}", styles["Normal"]))
-    elementos.append(Paragraph(f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
+    elementos.append(Paragraph(f"Generado: {ahora().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
     elementos.append(Spacer(1, 0.5 * cm))
 
     data = [["Punto", "Ubicación", "Fecha", "Presión (mca)", "Rango", "Cumple"]]

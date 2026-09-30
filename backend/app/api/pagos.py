@@ -10,6 +10,7 @@ from app.services.pago import registrar_pago, listar_facturas_pendientes_cliente
 from datetime import date
 from app.schemas.pago import PagoDelDiaResponse
 from app.services.pago import listar_pagos_del_dia
+from app.utils.fechas import hoy_chile
 
 router = APIRouter(prefix="/pagos", tags=["pagos"])
 
@@ -49,7 +50,7 @@ def pagos_del_dia(
     Lista los pagos registrados en una fecha (por defecto, hoy) de la
     empresa del usuario logueado.
     """
-    fecha_consulta = fecha or date.today()
+    fecha_consulta = fecha or hoy_chile()
     return listar_pagos_del_dia(db, current_user.empresa_id, fecha_consulta)
 
 

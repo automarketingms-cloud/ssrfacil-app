@@ -1,9 +1,7 @@
 from pydantic import BaseModel, ConfigDict, field_validator
 from datetime import datetime
 from typing import Optional, Literal
-from zoneinfo import ZoneInfo
-
-TZ_CHILE = ZoneInfo("America/Santiago")
+from app.utils.fechas import TZ_CHILE
 
 
 def _asumir_hora_chile(v: datetime) -> datetime:

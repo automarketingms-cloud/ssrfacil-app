@@ -9,6 +9,7 @@ from app.models.presion import MedicionPresion
 from app.schemas.reclamo import ReclamoCreate, ReclamoResponder, ReclamoUpdate
 from app.services.presion import evaluar_cumplimiento
 from app.services.historial import calcular_diferencias, registrar_edicion
+from app.utils.fechas import ahora, hoy_chile, fecha_chile, rango_mes_chile
 
 from io import BytesIO
 from openpyxl import Workbook
@@ -55,7 +56,7 @@ def generar_folio(db: Session, anio: int, empresa_id: int) -> str:
     """Genera el siguiente folio correlativo para el año, dentro de la empresa (ej '2026-001')."""
     ultimo = (
         db.query(Reclamo)
-        .filter(extract("year", Reclamo.fecha_recepcion) == anio, Reclamo.empresa_id == empresa_id)
+        .filter(Reclamo.anio == anio, Reclamo.empresa_id == empresa_id)
         .order_by(Reclamo.id.desc())
         .first()
     )
@@ -67,10 +68,10 @@ def generar_folio(db: Session, anio: int, empresa_id: int) -> str:
 
 
 def crear_reclamo(db: Session, datos: ReclamoCreate, empresa_id: int) -> Reclamo:
-    fecha_recepcion = datetime.now()
+    fecha_recepcion = ahora()
     anio = fecha_recepcion.year
     folio = generar_folio(db, anio, empresa_id)
-    plazo_vencimiento = sumar_dias_habiles(fecha_recepcion.date(), DIAS_HABILES_PLAZO)
+    plazo_vencimiento = sumar_dias_habiles(fecha_chile(fecha_recepcion), DIAS_HABILES_PLAZO)
 
     nombre_reclamante = datos.nombre_reclamante
     rut_reclamante = datos.rut_reclamante
@@ -117,11 +118,11 @@ def responder_reclamo(db: Session, reclamo_id: int, datos: ReclamoResponder, emp
     if reclamo is None:
         return None
 
-    fecha_respuesta = datetime.now()
+    fecha_respuesta = ahora()
     dias_habiles_respuesta = contar_dias_habiles_entre(
-        reclamo.fecha_recepcion.date(), fecha_respuesta.date()
+        fecha_chile(reclamo.fecha_recepcion), fecha_chile(fecha_respuesta)
     )
-    fuera_de_plazo = fecha_respuesta.date() > reclamo.plazo_vencimiento
+    fuera_de_plazo = fecha_chile(fecha_respuesta) > reclamo.plazo_vencimiento
 
     reclamo.respuesta = datos.respuesta
     reclamo.fecha_respuesta = fecha_respuesta
@@ -173,11 +174,11 @@ def listar_reclamos(db: Session, empresa_id: int, periodo: str = None, estado: s
     """periodo en formato 'YYYY-MM', filtra por fecha_recepcion."""
     query = db.query(Reclamo).filter(Reclamo.empresa_id == empresa_id)
     if periodo:
-        anio, mes = periodo.split("-")
+        inicio, fin = rango_mes_chile(periodo)
         query = query.filter(
-            extract("year", Reclamo.fecha_recepcion) == int(anio),
-            extract("month", Reclamo.fecha_recepcion) == int(mes),
-        )
+               Reclamo.fecha_recepcion >= inicio,
+               Reclamo.fecha_recepcion < fin,
+           )
     if estado:
         query = query.filter(Reclamo.estado == estado)
     if cliente_id:
@@ -265,10 +266,10 @@ def editar_reclamo(
         setattr(reclamo, campo, valor)
 
     # --- Auditoría ---
-    ahora = datetime.now(timezone.utc)
+    momento = ahora()
     reclamo.editado_por_id = usuario_id
-    reclamo.fecha_edicion = ahora
-    registrar_edicion(db, empresa_id, "reclamo", reclamo.id, usuario_id, diferencias, ahora)
+    reclamo.fecha_edicion = momento
+    registrar_edicion(db, empresa_id, "reclamo", reclamo.id, usuario_id, diferencias, momento)
 
     db.commit()
     db.refresh(reclamo)
@@ -317,7 +318,7 @@ def esta_fuera_de_plazo(reclamo: Reclamo) -> bool:
     if reclamo.fuera_de_plazo is not None:
         return reclamo.fuera_de_plazo
     if reclamo.estado == "abierto":
-        return date.today() > reclamo.plazo_vencimiento
+        return hoy_chile() > reclamo.plazo_vencimiento
     return False
 
 
@@ -348,10 +349,10 @@ def construir_reporte_reclamos(db: Session, periodo: str, empresa_id: int) -> di
             "folio": r.folio,
             "tipo_reclamo": r.tipo_reclamo,
             "nombre_reclamante": r.nombre_reclamante,
-            "fecha_recepcion": r.fecha_recepcion.strftime("%Y-%m-%d"),
+            "fecha_recepcion": fecha_chile(r.fecha_recepcion).isoformat(),
             "plazo_vencimiento": r.plazo_vencimiento.strftime("%Y-%m-%d"),
             "estado": r.estado,
-            "fecha_respuesta": r.fecha_respuesta.strftime("%Y-%m-%d") if r.fecha_respuesta else None,
+            "fecha_respuesta": fecha_chile(r.fecha_respuesta).isoformat() if r.fecha_respuesta else None,
             "dias_habiles_respuesta": r.dias_habiles_respuesta,
             "fuera_de_plazo": esta_fuera_de_plazo(r),
             "mediciones_presion": mediciones_por_reclamo.get(r.id, []),
@@ -383,7 +384,7 @@ def construir_excel_reporte_reclamos(periodo: str, db: Session, empresa_id: int)
     ws["A3"] = f"Total reclamos: {reporte['total_reclamos']} (Respondidos: {reporte['total_respondidos']})"
     ws["A4"] = f"Fuera de plazo: {reporte['total_fuera_de_plazo']}"
     ws["A5"] = f"Promedio días hábiles de respuesta: {reporte['promedio_dias_habiles_respuesta'] if reporte['promedio_dias_habiles_respuesta'] is not None else '—'}"
-    ws["A6"] = f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}"
+    ws["A6"] = f"Generado: {ahora().strftime('%d-%m-%Y %H:%M')}"
 
     headers = [
         "Folio", "Tipo", "Reclamante", "Fecha Recepción", "Plazo Vencimiento",
@@ -437,7 +438,7 @@ def construir_pdf_reporte_reclamos(periodo: str, db: Session, empresa_id: int) -
     elementos.append(Paragraph(
         f"Promedio días hábiles de respuesta: {promedio if promedio is not None else '—'}", styles["Normal"]
     ))
-    elementos.append(Paragraph(f"Generado: {datetime.now().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
+    elementos.append(Paragraph(f"Generado: {ahora().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
     elementos.append(Spacer(1, 0.5 * cm))
 
     data = [["Folio", "Tipo", "Reclamante", "F. Recepción", "Plazo", "Estado", "Días Hábiles", "Fuera Plazo"]]

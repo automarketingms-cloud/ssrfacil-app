@@ -3,6 +3,7 @@ from decimal import Decimal
 from sqlalchemy.orm import Session
 
 from app.models.historial import HistorialEdicion
+from app.utils.fechas import ahora
 
 
 def _serializar(valor):
@@ -57,7 +58,7 @@ def registrar_edicion(
         entidad=entidad,
         entidad_id=entidad_id,
         usuario_id=usuario_id,
-        fecha=fecha or datetime.now(timezone.utc),
+        fecha=fecha or ahora(),
         cambios=cambios,
     )
     db.add(registro)

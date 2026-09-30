@@ -3,7 +3,7 @@ from sqlalchemy import func
 from app.models.continuidad import CorteContinuidad
 from app.schemas.continuidad import CorteCreate, CorteCierre
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from app.utils.fechas import TZ_CHILE, ahora
 
 from io import BytesIO
 from openpyxl import Workbook
@@ -13,9 +13,6 @@ from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
-
-
-TZ_CHILE = ZoneInfo("America/Santiago")
 
 
 def formatear_fecha_chile(dt: datetime | None) -> str:
@@ -168,7 +165,7 @@ def construir_excel_reporte_continuidad(periodo: str, db: Session, empresa_id: i
         f"Duración promedio: {formatear_duracion(reporte['duracion_promedio_horas'])}"
     )
     ws["A5"] = f"Clientes afectados (total): {reporte['total_clientes_afectados']}"
-    ws["A6"] = f"Generado: {datetime.now(TZ_CHILE).strftime('%d-%m-%Y %H:%M')}"
+    ws["A6"] = f"Generado: {ahora().strftime('%d-%m-%Y %H:%M')}"
 
     headers = [
         "Estado", "Inicio", "Término", "Duración", "Tipo", "Causa",
@@ -226,7 +223,7 @@ def construir_pdf_reporte_continuidad(periodo: str, db: Session, empresa_id: int
         f"Duración promedio: {formatear_duracion(reporte['duracion_promedio_horas'])} | "
         f"Clientes afectados: {reporte['total_clientes_afectados']}", styles["Normal"]
     ))
-    elementos.append(Paragraph(f"Generado: {datetime.now(TZ_CHILE).strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
+    elementos.append(Paragraph(f"Generado: {ahora().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
     elementos.append(Spacer(1, 0.5 * cm))
 
     data = [["Estado", "Inicio", "Término", "Duración", "Tipo", "Sector", "Clientes Afect."]]

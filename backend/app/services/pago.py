@@ -9,7 +9,7 @@ from openpyxl.utils import get_column_letter
 from app.models.pago import Pago
 from app.models.factura import Factura
 from app.models.cliente import Cliente
-from app.models.usuario import Usuario
+from app.utils.fechas import hoy_chile
 
 # CLP no tiene decimales, así que cualquier método de pago puede diferir
 # hasta $1 respecto al saldo exacto (por redondeo a la unidad de peso).
@@ -36,7 +36,7 @@ def determinar_estado_factura(factura: Factura, saldo: float) -> str:
     """
     if saldo <= 0:
         return "pagada"
-    if date.today() > factura.fecha_vencimiento:
+    if hoy_chile() > factura.fecha_vencimiento:
         return "vencida"
     if saldo < factura.total_a_pagar:
         return "parcial"

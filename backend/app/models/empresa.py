@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from app.core.database import Base
+from app.utils.fechas import ahora
 
 
 class Empresa(Base):
@@ -10,4 +11,4 @@ class Empresa(Base):
     nombre = Column(String, nullable=False)
     rut = Column(String, unique=True, nullable=True)
     activa = Column(Boolean, default=True, nullable=False)
-    fecha_creacion = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    fecha_creacion = Column(DateTime(timezone=True), default=ahora)
