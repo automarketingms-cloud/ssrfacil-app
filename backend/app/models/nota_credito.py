@@ -2,8 +2,8 @@
 
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime, timezone
 from app.core.database import Base
+from app.utils.fechas import ahora
 
 
 class NotaCredito(Base):
@@ -25,7 +25,7 @@ class NotaCredito(Base):
     folio_referencia = Column(String, nullable=True)  # folio_sii de la factura que anula (snapshot)
     estado_envio_sii = Column(String, nullable=True)  # "pendiente" | "enviado" | "error"
 
-    creado_en = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    creado_en = Column(DateTime(timezone=True), default=ahora)
 
     empresa = relationship("Empresa")
     factura = relationship("Factura")
