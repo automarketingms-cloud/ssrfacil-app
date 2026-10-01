@@ -18,6 +18,20 @@ class MedicionPresion(Base):
     reclamo_id = Column(Integer, ForeignKey("reclamos.id"), nullable=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=True)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
+    registrado_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    editado_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    fecha_edicion = Column(DateTime(timezone=True), nullable=True)
 
     reclamo = relationship("Reclamo")
     cliente = relationship("Cliente")
+    
+    registrado_por = relationship("Usuario", foreign_keys="MedicionPresion.registrado_por_id")
+    editado_por = relationship("Usuario", foreign_keys="MedicionPresion.editado_por_id")
+
+    @property
+    def registrado_por_nombre(self):
+        return self.registrado_por.nombre if self.registrado_por else None
+
+    @property
+    def editado_por_nombre(self):
+        return self.editado_por.nombre if self.editado_por else None

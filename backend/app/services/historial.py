@@ -1,4 +1,4 @@
-from datetime import datetime, date, timezone
+from datetime import datetime, date, time, timezone
 from decimal import Decimal
 from sqlalchemy.orm import Session
 
@@ -8,7 +8,7 @@ from app.utils.fechas import ahora
 
 def _serializar(valor):
     """Deja el valor listo para guardarse en JSONB."""
-    if isinstance(valor, (datetime, date)):
+    if isinstance(valor, (datetime, date, time)):
         return valor.isoformat()
     if isinstance(valor, Decimal):
         return float(valor)

@@ -1,5 +1,10 @@
 import { apiFetch } from "./http";
-import type { Lectura, LecturaUpdate, LecturaListResponse } from "../types";
+import type {
+  Lectura,
+  LecturaUpdate,
+  LecturaListResponse,
+  LecturaReciente,
+} from "../types";
 
 export async function crearLectura(data: {
   cliente_id: number;
@@ -67,4 +72,10 @@ export async function crearLecturaTerminoMedio(data: {
     method: "POST",
     body: JSON.stringify(data),
   });
+}
+
+export async function obtenerLecturasRecientes(
+  limit = 10,
+): Promise<LecturaReciente[]> {
+  return apiFetch<LecturaReciente[]>(`/lecturas/recientes?limit=${limit}`);
 }

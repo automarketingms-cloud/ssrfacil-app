@@ -47,6 +47,19 @@ export interface LecturaUpdate {
   es_promedio?: boolean;
 }
 
+export interface LecturaReciente {
+  id: number;
+  cliente_id: number;
+  cliente_nombre: string | null;
+  numero_medidor: string | null;
+  periodo: string;
+  fecha_lectura: string;
+  lectura_actual: number;
+  consumo_m3: number | null;
+  es_promedio: boolean;
+  tiene_foto: boolean;
+}
+
 export interface DetalleTramo {
   numero_tramo: number;
   m3_en_tramo: number;
@@ -139,8 +152,6 @@ export interface ReporteFacturacionResponse {
 export interface MedicionPresionCreate {
   punto_medicion: string;
   ubicacion?: string;
-  fecha_medicion: string;
-  hora_medicion?: string;
   presion_mca: number;
   observaciones?: string;
   reclamo_id?: number | null;
@@ -158,6 +169,22 @@ export interface MedicionPresion {
   rango_maximo: number;
   cumple: boolean;
   reclamo_id: number | null;
+  cliente_id: number | null;
+  registrado_por_id: number | null;
+  registrado_por_nombre: string | null;
+  editado_por_id: number | null;
+  editado_por_nombre: string | null;
+  fecha_edicion: string | null;
+}
+
+export interface MedicionPresionUpdate {
+  punto_medicion?: string;
+  ubicacion?: string | null;
+  fecha_medicion?: string;
+  hora_medicion?: string | null;
+  presion_mca?: number;
+  observaciones?: string | null;
+  reclamo_id?: number | null;
 }
 
 export interface Factura {

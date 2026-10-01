@@ -1,49 +1,70 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
-import RegistrarCliente from "./pages/RegistrarCliente";
-import ListarClientes from "./pages/ListarClientes";
-import DetalleCliente from "./pages/DetalleCliente";
-import EditarCliente from "./pages/EditarCliente";
-import IngresarLectura from "./pages/IngresarLectura";
-import VerConsumo from "./pages/VerConsumo";
-import ListarTarifas from "./pages/ListarTarifas";
-import CrearTarifa from "./pages/CrearTarifa";
-import ResumenMensual from "./pages/ResumenMensual";
-import HistorialLecturas from "./pages/HistorialLecturas";
-import RutaLectura from "./pages/RutaLectura";
-import ReportesIndex from "./pages/ReportesIndex";
-import ReporteFacturacion from "./pages/ReporteFacturacion";
-import RegistrarPresion from "./pages/RegistrarPresion";
-import ReportePresion from "./pages/ReportePresion";
-import RegistrarCorte from "./pages/RegistrarCorte";
-import ReporteContinuidad from "./pages/ReporteContinuidad";
-import ListarReclamos from "./pages/ListarReclamos";
-import RegistrarReclamo from "./pages/RegistrarReclamo";
-import DetalleReclamo from "./pages/DetalleReclamo";
-import EditarReclamo from "./pages/EditarReclamo";
-import ReporteReclamos from "./pages/ReporteReclamos";
-import Dashboard from "./pages/Dashboard";
-import Facturacion from "./pages/Facturacion";
-import RegistrarPago from "./pages/RegistrarPago";
-import Configuracion from "./pages/Configuracion";
-import DetalleFactura from "./pages/DetalleFactura";
-import RegistrarLecturaMatriz from "./pages/RegistrarLecturaMatriz";
-import ReportesInternos from "./pages/ReportesInternos";
-import ComparativaAgua from "./pages/ComparativaAgua";
-import HistorialLecturaMatriz from "./pages/HistorialLecturaMatriz";
 import Login from "./pages/Login";
 import { AuthProvider } from "./context/AuthContext";
 import RutaProtegida from "./components/RutaProtegida";
-import ListarUsuarios from "./pages/ListarUsuarios";
-import RegistrarUsuario from "./pages/RegistrarUsuario";
-import EditarUsuario from "./pages/EditarUsuario";
-import CrearEmpresa from "./pages/CrearEmpresa";
-import MiPerfil from "./pages/MiPerfil";
-import ReporteClientesSubsidio from "./pages/ReporteClientesSubsidio";
-import MiCaja from "./pages/MiCaja";
-import DetalleCaja from "./pages/DetalleCaja";
-import GestionCajas from "./pages/GestionCajas";
-import ReportePagos from "./pages/ReportePagos";
+import { lazyConReintento as lazy } from "./utils/lazy";
+
+// Cada página se descarga recién cuando se entra a su ruta
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const MiPerfil = lazy(() => import("./pages/MiPerfil"));
+
+const ListarClientes = lazy(() => import("./pages/ListarClientes"));
+const DetalleCliente = lazy(() => import("./pages/DetalleCliente"));
+const RegistrarCliente = lazy(() => import("./pages/RegistrarCliente"));
+const EditarCliente = lazy(() => import("./pages/EditarCliente"));
+
+const IngresarLectura = lazy(() => import("./pages/IngresarLectura"));
+const RutaLectura = lazy(() => import("./pages/RutaLectura"));
+const HistorialLecturas = lazy(() => import("./pages/HistorialLecturas"));
+const RegistrarLecturaMatriz = lazy(
+  () => import("./pages/RegistrarLecturaMatriz"),
+);
+const HistorialLecturaMatriz = lazy(
+  () => import("./pages/HistorialLecturaMatriz"),
+);
+const VerConsumo = lazy(() => import("./pages/VerConsumo"));
+
+const RegistrarPresion = lazy(() => import("./pages/RegistrarPresion"));
+const EditarMedicionPresion = lazy(
+  () => import("./pages/EditarMedicionPresion"),
+);
+const RegistrarCorte = lazy(() => import("./pages/RegistrarCorte"));
+
+const ListarTarifas = lazy(() => import("./pages/ListarTarifas"));
+const CrearTarifa = lazy(() => import("./pages/CrearTarifa"));
+const ResumenMensual = lazy(() => import("./pages/ResumenMensual"));
+
+const Facturacion = lazy(() => import("./pages/Facturacion"));
+const DetalleFactura = lazy(() => import("./pages/DetalleFactura"));
+const RegistrarPago = lazy(() => import("./pages/RegistrarPago"));
+const MiCaja = lazy(() => import("./pages/MiCaja"));
+const DetalleCaja = lazy(() => import("./pages/DetalleCaja"));
+const GestionCajas = lazy(() => import("./pages/GestionCajas"));
+
+const ListarReclamos = lazy(() => import("./pages/ListarReclamos"));
+const RegistrarReclamo = lazy(() => import("./pages/RegistrarReclamo"));
+const DetalleReclamo = lazy(() => import("./pages/DetalleReclamo"));
+const EditarReclamo = lazy(() => import("./pages/EditarReclamo"));
+
+const ReportesIndex = lazy(() => import("./pages/ReportesIndex"));
+const ReporteFacturacion = lazy(() => import("./pages/ReporteFacturacion"));
+const ReportePresion = lazy(() => import("./pages/ReportePresion"));
+const ReporteContinuidad = lazy(() => import("./pages/ReporteContinuidad"));
+const ReporteReclamos = lazy(() => import("./pages/ReporteReclamos"));
+
+const ReportesInternos = lazy(() => import("./pages/ReportesInternos"));
+const ComparativaAgua = lazy(() => import("./pages/ComparativaAgua"));
+const ReporteClientesSubsidio = lazy(
+  () => import("./pages/ReporteClientesSubsidio"),
+);
+const ReportePagos = lazy(() => import("./pages/ReportePagos"));
+
+const Configuracion = lazy(() => import("./pages/Configuracion"));
+const ListarUsuarios = lazy(() => import("./pages/ListarUsuarios"));
+const RegistrarUsuario = lazy(() => import("./pages/RegistrarUsuario"));
+const EditarUsuario = lazy(() => import("./pages/EditarUsuario"));
+const CrearEmpresa = lazy(() => import("./pages/CrearEmpresa"));
 
 export default function App() {
   return (
@@ -86,6 +107,10 @@ export default function App() {
             <Route path="/lecturas" element={<IngresarLectura />} />
             <Route path="/lecturas/ruta" element={<RutaLectura />} />
             <Route path="/presion" element={<RegistrarPresion />} />
+            <Route
+              path="/presion/:id/editar"
+              element={<EditarMedicionPresion />}
+            />
             <Route path="/continuidad" element={<RegistrarCorte />} />
             <Route
               path="/lectura-matriz"

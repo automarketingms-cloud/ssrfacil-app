@@ -1,6 +1,6 @@
 import uuid
 from datetime import date
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -19,6 +19,7 @@ from app.services.calculo_tarifa import (
 from app.services.storage import subir_foto_medidor, obtener_url_firmada
 from fastapi.responses import StreamingResponse
 from app.services.ruta_lectura import construir_ruta_lectura, construir_excel_ruta_lectura, construir_pdf_ruta_lectura
+from app.services.lectura import listar_lecturas_recientes
 
 
 router = APIRouter(prefix="/lecturas", tags=["Lecturas"])
@@ -221,6 +222,15 @@ def descargar_ruta_lectura_pdf(
         headers={"Content-Disposition": "attachment; filename=ruta_lectura.pdf"},
     )
 
+
+@router.get("/recientes")
+def lecturas_recientes(
+    limit: int = Query(default=10, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Últimas lecturas tomadas en la empresa, para el listado de Ingresar Lectura."""
+    return listar_lecturas_recientes(db, current_user.empresa_id, limit)
 
 @router.get("/{lectura_id}", response_model=LecturaResponse)
 def obtener_lectura(

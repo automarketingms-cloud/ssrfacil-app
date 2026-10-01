@@ -7,6 +7,7 @@ import Textarea from "../components/Textarea";
 import Input from "../components/Input";
 import Select from "../components/Select";
 import BotonVolver from "../components/BotonVolver";
+import { validarRut } from "../utils/rut";
 
 const TIPOS_RECLAMO = [
   "Corte no informado",
@@ -70,6 +71,11 @@ export default function RegistrarReclamo() {
       setError(
         "Nombre y RUT del reclamante son obligatorios si no hay cliente registrado",
       );
+      return;
+    }
+
+    if (!tieneCliente && !validarRut(form.rut_reclamante.trim())) {
+      setError("El RUT del reclamante no es válido");
       return;
     }
 

@@ -4,7 +4,10 @@ import { listarReclamos } from "../api/reclamos";
 import type { MedicionPresion, Reclamo } from "../types";
 import Input from "../components/Input";
 import Textarea from "../components/Textarea";
-import { horaChile } from "../utils/fechas";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { formatearFecha } from "../utils/fechas";
+import { puedeEditarMedicion } from "../utils/presion";
 
 export default function RegistrarPresion() {
   const [historial, setHistorial] = useState<MedicionPresion[]>([]);
@@ -15,19 +18,20 @@ export default function RegistrarPresion() {
   const [asociarReclamo, setAsociarReclamo] = useState(false);
   const [reclamos, setReclamos] = useState<Reclamo[]>([]);
   const [reclamoId, setReclamoId] = useState<number | "">("");
+  const { usuario } = useAuth();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     punto_medicion: "",
     ubicacion: "",
-    fecha_medicion: "",
     presion_mca: "",
     observaciones: "",
   });
 
   const cargarHistorial = async () => {
     try {
-      const data = await obtenerHistorialPresion();
-      setHistorial(data.slice(0, 10)); // últimas 10 mediciones
+      const data = await obtenerHistorialPresion(undefined, undefined, 10);
+      setHistorial(data); // el backend ya devuelve solo las últimas 10
     } catch (err) {
       setError(
         err instanceof Error
@@ -78,13 +82,9 @@ export default function RegistrarPresion() {
 
     setCargando(true);
     try {
-      const horaActual = horaChile(); // "HH:MM:SS"
-
       await crearMedicionPresion({
         punto_medicion: form.punto_medicion,
         ubicacion: form.ubicacion || undefined,
-        fecha_medicion: form.fecha_medicion,
-        hora_medicion: horaActual,
         presion_mca: Number(form.presion_mca),
         observaciones: form.observaciones || undefined,
         reclamo_id: asociarReclamo ? Number(reclamoId) : undefined,
@@ -93,7 +93,6 @@ export default function RegistrarPresion() {
       setForm({
         punto_medicion: "",
         ubicacion: "",
-        fecha_medicion: "",
         presion_mca: "",
         observaciones: "",
       });
@@ -117,8 +116,8 @@ export default function RegistrarPresion() {
           Registrar medición de presión
         </h1>
         <p className="text-sm text-muted mb-6">
-          Registra una medición de presión en un punto de la red. La hora se
-          registra automáticamente al guardar.
+          Registra una medición de presión en un punto de la red. La fecha y
+          hora se registran automáticamente al guardar.
         </p>
 
         <form
@@ -140,15 +139,6 @@ export default function RegistrarPresion() {
             value={form.ubicacion}
             onChange={handleChange}
             placeholder="Opcional"
-          />
-
-          <Input
-            label="Fecha de medición"
-            name="fecha_medicion"
-            type="date"
-            value={form.fecha_medicion}
-            onChange={handleChange}
-            required
           />
 
           <Input
@@ -253,20 +243,32 @@ export default function RegistrarPresion() {
                 <div>
                   <p className="text-text font-medium">{m.punto_medicion}</p>
                   <p className="text-sm text-muted">
-                    {m.fecha_medicion} {m.hora_medicion ?? ""} — {m.presion_mca}{" "}
-                    mca
+                    {formatearFecha(m.fecha_medicion)}{" "}
+                    {m.hora_medicion?.slice(0, 5) ?? ""} — {m.presion_mca} mca
                     {m.reclamo_id ? " · Asociada a reclamo" : ""}
+                    {m.editado_por_nombre ? " · Editada" : ""}
                   </p>
                 </div>
-                <span
-                  className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                    m.cumple
-                      ? "bg-primary-light text-primary-dark"
-                      : "bg-red-50 text-red-600"
-                  }`}
-                >
-                  {m.cumple ? "Dentro de rango" : "Fuera de rango"}
-                </span>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <span
+                    className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                      m.cumple
+                        ? "bg-primary-light text-primary-dark"
+                        : "bg-red-50 text-red-600"
+                    }`}
+                  >
+                    {m.cumple ? "Dentro de rango" : "Fuera de rango"}
+                  </span>
+                  {puedeEditarMedicion(m, usuario) && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/presion/${m.id}/editar`)}
+                      className="text-xs font-medium text-primary hover:text-primary-dark"
+                    >
+                      Editar
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

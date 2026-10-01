@@ -3,9 +3,13 @@ import Input from "../components/Input";
 import ClienteCombobox from "../components/ClienteCombobox";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { listarClientes } from "../api/clientes";
-import { crearLectura, crearLecturaTerminoMedio } from "../api/lecturas";
-import type { Cliente } from "../types";
-import { hoyChileISO } from "../utils/fechas";
+import {
+  crearLectura,
+  crearLecturaTerminoMedio,
+  obtenerLecturasRecientes,
+} from "../api/lecturas";
+import type { Cliente, LecturaReciente } from "../types";
+import { formatearFecha, hoyChileISO } from "../utils/fechas";
 
 const today = hoyChileISO();
 const currentPeriodo = today.slice(0, 7); // "2026-07"
@@ -31,6 +35,7 @@ export default function IngresarLectura() {
   const [loadingTerminoMedio, setLoadingTerminoMedio] = useState(false);
   const [confirmacion, setConfirmacion] = useState<TipoConfirmacion>(null);
   const fotoInputRef = useRef<HTMLInputElement>(null);
+  const [recientes, setRecientes] = useState<LecturaReciente[]>([]);
 
   const clienteSeleccionado = clientes.find(
     (c) => String(c.id) === form.cliente_id,
@@ -41,6 +46,16 @@ export default function IngresarLectura() {
       .then((data) => setClientes(data.items))
       .catch(() => setError("No se pudo cargar la lista de clientes"))
       .finally(() => setLoadingClientes(false));
+  }, []);
+
+  function cargarRecientes() {
+    obtenerLecturasRecientes(10)
+      .then(setRecientes)
+      .catch(() => setRecientes([])); // si falla, no bloquea el ingreso de lecturas
+  }
+
+  useEffect(() => {
+    cargarRecientes();
   }, []);
 
   // Libera la URL del preview anterior al cambiar o desmontar, para no
@@ -159,6 +174,7 @@ export default function IngresarLectura() {
       setSuccess(true);
       setConfirmacion(null);
       limpiarFormulario();
+      cargarRecientes();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado");
       setConfirmacion(null);
@@ -283,6 +299,51 @@ export default function IngresarLectura() {
           </button>
         </div>
       </form>
+
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold text-text mb-3">
+          Últimas lecturas
+        </h2>
+        {recientes.length === 0 ? (
+          <p className="text-muted text-sm">
+            No hay lecturas registradas todavía.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {recientes.map((l) => (
+              <li
+                key={l.id}
+                className="bg-surface border border-border rounded-xl p-4 flex justify-between items-center gap-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-text font-medium truncate">
+                    {l.cliente_nombre ?? "—"}
+                  </p>
+                  <p className="text-sm text-muted">
+                    Medidor {l.numero_medidor ?? "—"} · {l.periodo} ·{" "}
+                    {formatearFecha(l.fecha_lectura)}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <span className="text-sm font-semibold text-text">
+                    {l.lectura_actual} m³
+                  </span>
+                  {l.consumo_m3 !== null && (
+                    <span className="text-xs text-muted">
+                      Consumo: {l.consumo_m3} m³
+                    </span>
+                  )}
+                  {l.es_promedio && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+                      Término medio
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {confirmacion === "lectura" && (
         <ConfirmDialog

@@ -33,7 +33,7 @@ export default function Select({
         value={value}
         onChange={onChange}
         required={required}
-        className="px-3 py-2 rounded-lg border border-border bg-surface text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
+        className="campo"
       >
         <option value="" disabled>
           {placeholder}

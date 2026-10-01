@@ -32,9 +32,7 @@ export default function Textarea({
         required={required}
         placeholder={placeholder}
         rows={rows}
-        className={`w-full px-3 py-2 rounded-lg border bg-surface text-text placeholder:text-muted text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 ${
-          error ? "border-red-400" : "border-border"
-        }`}
+        className={`campo w-full ${error ? "campo-error" : ""}`}
       />
       {error && <span className="text-xs text-red-500">{error}</span>}
     </div>

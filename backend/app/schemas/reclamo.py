@@ -2,6 +2,8 @@ from pydantic import BaseModel, field_validator, model_validator
 from datetime import datetime, date
 from typing import Optional
 
+from app.utils.rut import validar_rut
+
 
 class ReclamoCreate(BaseModel):
     cliente_id: Optional[int] = None
@@ -11,6 +13,14 @@ class ReclamoCreate(BaseModel):
     tipo_reclamo: str
     descripcion: str
     observaciones: Optional[str] = None
+
+    
+    @field_validator("rut_reclamante")
+    @classmethod
+    def validar_rut_reclamante(cls, v: Optional[str]) -> Optional[str]:
+        if v and not validar_rut(v):
+            raise ValueError("RUT inválido")
+        return v
 
     @model_validator(mode="after")
     def validar_identificacion_reclamante(self):
@@ -47,6 +57,13 @@ class ReclamoUpdate(BaseModel):
         # solo se ejecuta si el campo viene en el request
         if v is None or not v.strip():
             raise ValueError("Este campo no puede quedar vacío")
+        return v.strip()
+    
+    @field_validator("rut_reclamante")
+    @classmethod
+    def validar_rut_reclamante_update(cls, v: Optional[str]) -> Optional[str]:
+        if v and not validar_rut(v):
+            raise ValueError("RUT inválido")
         return v
 
 class ReclamoResponse(BaseModel):

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Home,
@@ -351,7 +351,11 @@ export default function Layout() {
         </header>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-bg">
-          <Outlet />
+          <Suspense
+            fallback={<div className="p-6 text-sm text-muted">Cargando...</div>}
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

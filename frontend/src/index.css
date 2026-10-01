@@ -7,6 +7,8 @@
   --color-border: #e2e8f0;
   --color-text: #1e293b;
   --color-muted: #64748b;
+  --color-field-border: #cbd5e1;
+  --color-field-border-hover: #94a3b8;
 
   --color-primary: #0284c7;
   --color-primary-light: #e0f2fe;
@@ -67,5 +69,55 @@ body {
 
   button:disabled {
     cursor: not-allowed;
+  }
+}
+
+/* Campos de formulario: un solo estilo para toda la app */
+@layer components {
+  .campo {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-field-border);
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    font-size: 1rem; /* 16px en celular: evita el zoom automático de iOS al enfocar */
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+
+  @media (min-width: 640px) {
+    .campo {
+      font-size: 0.875rem;
+    }
+  }
+
+  .campo::placeholder {
+    color: var(--color-muted);
+  }
+
+  .campo:hover:not(:disabled):not(:focus) {
+    border-color: var(--color-field-border-hover);
+  }
+
+  .campo:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgb(2 132 199 / 0.2);
+  }
+
+  .campo:disabled {
+    background-color: var(--color-bg);
+    color: var(--color-muted);
+    cursor: not-allowed;
+  }
+
+  .campo-error,
+  .campo-error:hover:not(:disabled):not(:focus) {
+    border-color: var(--color-danger);
+  }
+
+  .campo-error:focus {
+    box-shadow: 0 0 0 3px rgb(220 38 38 / 0.2);
   }
 }
